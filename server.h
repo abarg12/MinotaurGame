@@ -1,5 +1,11 @@
 /*** server.h ***/
+#ifndef SERVER_HEADER
+#define SERVER_HEADER
 
+#include <assert.h>
+
+#define ROWS 32
+#define COLUMNS 32
 
 typedef enum ServerState {
     RECEIVE,
@@ -25,7 +31,6 @@ typedef enum Direction {
     LEFT, 
 } Direction; 
 
-
 typedef struct PlayerPhysics {
     int x;
     int y;
@@ -33,17 +38,32 @@ typedef struct PlayerPhysics {
 } PlayerPhysics;
 
 typedef struct Player {
-    PlayerState player_state;
     PlayerPhysics phys;
+    PlayerState player_state;
+    int *addr_len;
+    struct sockaddr_in *player_addr;
+    struct Player *next;
 } *Player;
 
-typedef struct Game {
-    int  num_players;
-    char map[32][32];  //TODO: decide on definite map size
-    enum GameState game_state;
+typedef struct PlayerList {
+    int    num_players;
     Player head;
     Player tail;
+}*PlayerList;
+
+typedef struct Game {
+    char        *map;
+    int         sockfd;
+    GameState   game_state;
+    ServerState server_state;
+    PlayerList  player_list;
+    fd_set      *active_fd_set, *read_fd_set;
+    struct timeval **timeout_p;
 } *Game;
 
 
+void initialize_game(Game game, int sockfd);
+void clear_all_players(Game game);
 
+
+#endif
