@@ -7,8 +7,11 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <sys/types.h>
+#include <netdb.h> 
 #include "client.h"
 
+#define BUFSIZE 533
 
 PlayerState lobby_loop(char *hostname, int port_num);
 
@@ -16,7 +19,12 @@ PlayerState lobby_loop(char *hostname, int port_num);
 int main(int argc, char **argv) {
     char *hostname;
     int port_num;
-
+    int sockfd;
+    int serverlen;
+    struct sockaddr_in serveraddr;
+    struct hostent *server;
+    char buf[BUFSIZE];
+    
     if (argc == 1) {
         hostname = "comp112-05.cs.tufts.edu";
         port_num = 9051;
@@ -27,6 +35,28 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: %s <server address> <port>\n", argv[0]);
         exit(1);
     }
+
+    /* socket: create the socket */
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0) { 
+        fprintf(stderr, "ERROR opening socket");
+        exit(1);
+    }
+
+    /* gethostbyname: get the server's DNS entry */
+    server = gethostbyname(hostname);
+    if (server == NULL) {
+        fprintf(stderr,"ERROR, no such host as %s\n", hostname);
+        exit(1);
+    }
+
+    /* build the server's Internet address */
+    bzero((char *) &serveraddr, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr, 
+    (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+    serveraddr.sin_port = htons(port_num);
+
 
     // start ncurses mode
     initscr();
