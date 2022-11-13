@@ -13,7 +13,7 @@
 
 #define BUFSIZE 533
 
-PlayerState lobby_loop(char *hostname, int port_num);
+PlayerState lobby_loop(char *hostname, int port_num, WINDOW *game_window);
 
 
 int main(int argc, char **argv) {
@@ -60,12 +60,14 @@ int main(int argc, char **argv) {
 
     // start ncurses mode
     initscr();
+    refresh();
+    WINDOW *game_window = newwin(30, 90, 3, 0);
 
     PlayerState pstate = IN_LOBBY; 
     while (1) {
         switch (pstate) {
             case IN_LOBBY: {
-                pstate = lobby_loop(hostname, port_num);
+                pstate = lobby_loop(hostname, port_num, game_window);
                 break;
             }
             
@@ -80,9 +82,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-PlayerState lobby_loop(char *hostname, int port_num) {
-    printw("Lobby\n");
-    printw("Connected to server with address: %s\n", hostname); 
-    refresh();
+PlayerState lobby_loop(char *hostname, int port_num, WINDOW *game_window) {
+    wprintw(game_window, " Lobby\n");
+    wprintw(game_window, " Connected to server with address: %s\n", hostname); 
+    wprintw(game_window, " screensize = %d, %d\n", LINES, COLS);
+    box(game_window, 0, 0);
+    wrefresh(game_window);
     getch(); 
 }
