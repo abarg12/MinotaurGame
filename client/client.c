@@ -19,7 +19,8 @@ void registration_rq(ServerData sd, char *player_name);
 
 
 int main(int argc, char **argv) {
-/*    
+// Fields below now stored in the ServerData struct (in client.h)
+/*
     char *hostname;
     int port_num;
     int sockfd;
