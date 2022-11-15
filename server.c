@@ -115,12 +115,15 @@ void receive_data(Game game)
             char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
             register_player(game, name, clientaddr, clientlen);
             print_players(game);
+            remove_player(game, name);
+            print_players(game);
             break;
         
         }
         case EXIT: {
             fprintf(stderr, "exit\n");
             // remove_player(game, buf + 1);
+            char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
         
             break;
         }
@@ -182,8 +185,25 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
 // remove a player based on the name
 void remove_player(Game game, char *name)
 {
-    Player
-
+    fprintf(stderr, "removing player %s\n", name );
+    Player curr = game->list_head;
+    Player prev = curr;
+    while (curr != NULL) {
+        if (strcmp(curr->name, name) == 0) {
+            if (curr == game->list_head) {
+                game->list_head = curr->next;
+            } else if (curr == game->list_tail) {
+                game->list_tail = prev;
+            } else {
+                prev->next = curr->next;
+            }
+            free(curr);
+            break;
+        }
+        prev = curr;
+        curr = curr->next;
+    }
+    game->num_players--;
 }
 
 // todo: initialize the timeout in an intelligent way
@@ -219,10 +239,16 @@ void clear_all_players(Game game)
 
 void print_players(Game game)
 {
-    Player curr = game->list_head;
-    while (curr != NULL) {
-        fprintf(stderr, "name: %s\n", curr->name);
-        curr = curr->next;
+    if (game->list_head == NULL)
+        fprintf(stderr, "no players \n");
+    else {
+        fprintf(stderr, "players:\n");
+
+        Player curr = game->list_head;
+        while (curr != NULL) {
+            fprintf(stderr, "%s\n", curr->name);
+            curr = curr->next;
+        }
     }
 }
 
