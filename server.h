@@ -49,6 +49,7 @@ typedef struct PlayerPhysics {
     Direction d; 
 } PlayerPhysics;
 
+// list of players
 typedef struct Player {
     char name[PLAYER_NAME_LEN];
     PlayerPhysics phys;
@@ -58,6 +59,13 @@ typedef struct Player {
     struct Player *next;
 } *Player;
 
+// list of move instructions
+typedef struct MoveInstruction {
+    Player p;
+    Direction d;
+    struct MoveInstruction *next;
+} *Move;
+
 typedef struct Game {
     int         sockfd;
     GameState   game_state;
@@ -65,6 +73,9 @@ typedef struct Game {
     int         num_players;
     Player      list_head;
     Player      list_tail;
+    Move        move_head;
+    Move        move_tail;
+    Move        payload_head; // the first move to execute in the new payload
     fd_set      *active_fd_set, *read_fd_set;
     struct timeval **timeout_p;
 } *Game;

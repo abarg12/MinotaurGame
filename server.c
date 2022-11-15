@@ -106,7 +106,7 @@ void receive_data(Game game)
 
     switch (msg_type) {
         case REGISTER: {
-            //todo: error handling: client is already registered
+            //todo ? error handling: client is already registered
             fprintf(stderr, "register player\n");
             
             // todo
@@ -115,8 +115,6 @@ void receive_data(Game game)
             char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
             register_player(game, name, clientaddr, clientlen);
             print_players(game);
-            remove_player(game, name);
-            print_players(game);
             break;
         
         }
@@ -124,11 +122,17 @@ void receive_data(Game game)
             fprintf(stderr, "exit\n");
             // remove_player(game, buf + 1);
             char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
+            remove_player(game, name);
+            print_players(game);
         
             break;
         }
         case MOVE: {
             fprintf(stderr, "move\n");
+            // add the move instruction to a list of payload structs
+            // find the player by name first
+            // create new moveInstruction struct
+            // need to keep tabs on which is the next instruction to execute,
         
             break;
         }
