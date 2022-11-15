@@ -13,9 +13,9 @@
 
 #define BUFSIZE 533
 
-PlayerState lobby_loop(ServerData sd, WINDOW *game_window, char *player_name);
+PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
-void registration_rq(ServerData sd, char *player_name);
+void registration_rq(ServerData *sd, char *player_name);
 
 
 int main(int argc, char **argv) {
@@ -59,9 +59,10 @@ int main(int argc, char **argv) {
     /* build the server's Internet address */
     bzero((char *) &(sd.serveraddr), sizeof(sd.serveraddr));
     sd.serveraddr.sin_family = AF_INET;
-    bcopy((char *)(sd.server)->h_addr, 
-    (char *)&(sd.serveraddr.sin_addr.s_addr), (sd.server)->h_length);
+    bcopy((char *) sd.server->h_addr, 
+    (char *)&(sd.serveraddr.sin_addr.s_addr), sd.server->h_length);
     sd.serveraddr.sin_port = htons(sd.port_num);
+    sd.serverlen = sizeof(sd.serveraddr);
 
 
     // start ncurses mode
@@ -75,7 +76,7 @@ int main(int argc, char **argv) {
     while (sentinel) {
         switch (pstate) {
             case IN_LOBBY: {
-                pstate = lobby_loop(sd, game_window, player_name);
+                pstate = lobby_loop(&sd, game_window, player_name);
                 break;
             }
             
@@ -92,11 +93,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-PlayerState lobby_loop(ServerData sd, WINDOW *game_window, char *player_name) {
+PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     // Set up lobby UI
     game_window = newwin(32, 96, 3, 0);
     mvwprintw(game_window, 2, 3, "Minotaur Lobby\n");
-    mvwprintw(game_window, 4, 3, "Connected to server with address: %s\n", sd.hostname); 
+    mvwprintw(game_window, 4, 3, "Connected to server with address: %s\n", sd->hostname); 
     //mvwprintw(game_window, 5, 3, "screensize = %d, %d\n", LINES, COLS);
     box(game_window, 0, 0);
     mvprintw(0,0, "Please enter name: "); 
@@ -139,19 +140,17 @@ PlayerState lobby_loop(ServerData sd, WINDOW *game_window, char *player_name) {
 }
 
 
-void registration_rq(ServerData sd, char *player_name) {
+void registration_rq(ServerData *sd, char *player_name) {
     // create the buffer to send to server 
     char rrq[21];
+    char buf[533];
+    int n;
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
 
-    n = sendto(sd.sockfd, rrq, 21, 0, (struct sockaddr *) &(sd.serveraddr), sd.serverlen);
+    n = sendto(sd->sockfd, rrq, 21, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
     if (n < 0) {
         fprintf(stderr, "sendto error\n");
-        fprintf(stderr, player_name);
-        fprintf(stderr, "%d\n", sd.sockfd);
-        fprintf(stderr, "%d\n", sd.serverlen);
-        fprintf(stderr, "%d\n", sd.serveraddr);
         exit(1);
     }
     // TODO: connect to server to get start signal
