@@ -131,8 +131,8 @@ PlayerState lobby_loop(ServerData sd, WINDOW *game_window, char *player_name) {
         mvwprintw(game_window, 6, 3, "Sent request to game server");
         wrefresh(game_window);
         sleep(1);
-        client_exit(game_window);
-        exit(0);
+        // client_exit(game_window);
+        // exit(0);
     }
     
     delwin(game_window);
@@ -145,8 +145,11 @@ void registration_rq(ServerData sd, char *player_name) {
     char rrq[21];
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
-
-    sendto(sd.sockfd, rrq, 21, 0, (struct sockaddr *) &sd.serveraddr, sd.serverlen);
+    fprintf(stderr, "sending registration rq\n");
+    int n = sendto(sd.sockfd, rrq, 21, 0, (struct sockaddr *) &sd.serveraddr, sd.serverlen);
+    if (n < 0)
+        fprintf(stderr, "error in send to\n");
+    sleep(5);
     return;
 }
 
