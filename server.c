@@ -10,12 +10,10 @@
 
 int main (int argc, char **argv) 
 {
-    int sockfd; /* socket */
-	int portno; /* port to listen on */
+    int sockfd, portno, optval; /* port to listen on */
+	char *hostaddrp; /* dotted decimal host addr string */
 	struct sockaddr_in serveraddr; /* server's addr */
 	struct hostent *hostp; /* client host info */
-	char *hostaddrp; /* dotted decimal host addr string */
-	int optval; /* flag value for setsockopt */
 	struct timeval *t = NULL;
 
 	if (argc != 2) {
@@ -52,92 +50,92 @@ int main (int argc, char **argv)
         game->read_fd_set = game->active_fd_set;
         switch(game->server_state) 
         {
-            // process request: register client, exit client, move instruction
-            case RECEIVE: 
-            {
-                fprintf(stderr, "receive state\n");
-                receive_data(game);
-                // will change states using select()
-                // only exit the receive state when the timeout actually elapsed
-                // else, stay in the state to get more input from another client
-                // add payload
-                return 0;
+            // handles: register client, exit client, move instruction
+            case RECEIVE: {
+                bool timed_out = receive_data(game);
+                if (timed_out) {
+                    game->server_state = UPDATE;
+                    // reset the timeout for the next tick
+                }
                 break;
             }
             
-            case UPDATE:
-            {
+            case UPDATE: {
                 break;
             }
             
-            case SEND:
-            {
+            case SEND: {
                 break;
             }
         }
     }
 }
 
-void receive_data(Game game)
+// struct sockaddr_in {
+//     sa_family_t    sin_family; /* address family: AF_INET */
+//     in_port_t      sin_port;   /* port in network byte order */
+//     struct in_addr sin_addr;   /* internet address */
+// };
+
+// will change states using select()
+// only change to 'update' state when the timeout elapses
+// else, stay in the state to get more input (move instr) from clients (same of diff)
+bool receive_data(Game game)
 {
     char buf[MAX_CLIENT_MSG];
 	bzero(buf, MAX_CLIENT_MSG);
     
+    // todo review the valgrind initialization error
     struct sockaddr_in *clientaddr = malloc(sizeof(*clientaddr));
     assert (clientaddr != NULL);
-
-    int *clientlen = malloc(sizeof(int));
+    int *clientlen = malloc(sizeof(*clientlen));
     assert(clientlen != NULL);
 
     /* Block until input arrives on an active socket or if timeout expires. */
-    // fprintf(stderr, "waiting for data \n");
-	// if (select (FD_SETSIZE, game->read_fd_set, NULL, NULL, NULL) < 0) {
-	// 	fprintf(stderr, "error in Select\n");
-	// }
-    // fprintf(stderr, "got data \n");
+	if (select (FD_SETSIZE, game->read_fd_set, NULL, NULL, NULL) < 0) {
+		fprintf(stderr, "error in Select\n");
+	}
 
-	// int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, (struct sockaddr *) 	
-	// 				 clientaddr, clientlen);
-	// if (n < 0)
-	// 	fprintf(stderr, "ERROR in recvfrom");
+    // if (timedout in select call)
+    // return true; 
 
-    // MessageType msg_type = buf[0];
-    MessageType msg_type = 0;
+	int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, (struct sockaddr *) clientaddr, clientlen);
+	if (n < 0)
+		fprintf(stderr, "ERROR in recvfrom\n");
 
-    switch (msg_type) {
+    switch (buf[0]) {
         case REGISTER: {
-            //todo ? error handling: client is already registered
             fprintf(stderr, "register player\n");
-            
-            // todo
-            // register_player(game, buf + 1, clientaddr, clientlen);
-            
-            char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
-            register_player(game, name, clientaddr, clientlen);
+            register_player(game, buf + 1, clientaddr, clientlen);
             print_players(game);
             break;
-        
         }
+
         case EXIT: {
             fprintf(stderr, "exit\n");
-            // remove_player(game, buf + 1);
-            char name[PLAYER_NAME_LEN] = "Sam"; // placeholder
-            remove_player(game, name);
+            remove_player(game, buf + 1);
             print_players(game);
-        
             break;
         }
+
         case MOVE: {
             fprintf(stderr, "move\n");
-            // add the move instruction to a list of payload structs
-            // find the player by name first
-            // create new moveInstruction struct
-            // need to keep tabs on which is the next instruction to execute,
-        
+            register_move(game, buf);
             break;
         }
     }
+
 }
+
+// add the move instruction to a payload 
+// find the player by name first
+// create new moveInstruction struct
+// need to keep tabs on which is the next instruction to execute,
+void register_move(Game game, char *buf)
+{
+
+}
+
 
 // registers a player in the game
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
@@ -151,17 +149,16 @@ void register_player(Game game, char *name, struct sockaddr_in *clientaddr,
 void add_player_to_list(Game game, Player p)
 {
     // list is empty, add to front
-    if (game->list_head == NULL) {
-        game->list_head = p;
-        game->list_tail = p;
+    if (game->players_head == NULL) {
+        game->players_head = p;
+        game->players_tail = p;
     
     // add to end
     } else {
-        game->list_tail->next = p;
-        game->list_tail = p;
+        game->players_tail->next = p;
+        game->players_tail = p;
     }
-
-    game->num_players++;
+    game->num_registered_players++;
 }
 
 Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr, 
@@ -190,14 +187,14 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
 void remove_player(Game game, char *name)
 {
     fprintf(stderr, "removing player %s\n", name );
-    Player curr = game->list_head;
+    Player curr = game->players_head;
     Player prev = curr;
     while (curr != NULL) {
         if (strcmp(curr->name, name) == 0) {
-            if (curr == game->list_head) {
-                game->list_head = curr->next;
-            } else if (curr == game->list_tail) {
-                game->list_tail = prev;
+            if (curr == game->players_head) {
+                game->players_head = curr->next;
+            } else if (curr == game->players_tail) {
+                game->players_tail = prev;
             } else {
                 prev->next = curr->next;
             }
@@ -207,7 +204,7 @@ void remove_player(Game game, char *name)
         prev = curr;
         curr = curr->next;
     }
-    game->num_players--;
+    game->num_registered_players--;
 }
 
 // todo: initialize the timeout in an intelligent way
@@ -215,9 +212,15 @@ void remove_player(Game game, char *name)
 void initialize_game(Game game, int sockfd)
 {
     // players
-    game->list_head = NULL;
-    game->list_tail = NULL;
+    game->players_head = NULL;
+    game->players_tail = NULL;
     clear_all_players(game);
+
+    // moves
+    game->moves_head = NULL;
+    game->moves_tail = NULL;
+    // todo: delete all the moves?
+    // clear_all_moves(game);
 
     // states
     game->game_state   = WAITING;
@@ -232,9 +235,19 @@ void initialize_game(Game game, int sockfd)
 }
 
 
+// todo: update counts of registered/active players
 void clear_all_players(Game game)
 {   
-    Player curr = game->list_head;
+    Player curr = game->players_head;
+    while (curr != NULL) {
+        free(curr);
+        curr = curr->next;
+    }
+}
+
+void clear_all_moves(Game game)
+{   
+    Move curr = game->moves_head;
     while (curr != NULL) {
         free(curr);
         curr = curr->next;
@@ -243,12 +256,12 @@ void clear_all_players(Game game)
 
 void print_players(Game game)
 {
-    if (game->list_head == NULL)
+    if (game->players_head == NULL)
         fprintf(stderr, "no players \n");
     else {
         fprintf(stderr, "players:\n");
 
-        Player curr = game->list_head;
+        Player curr = game->players_head;
         while (curr != NULL) {
             fprintf(stderr, "%s\n", curr->name);
             curr = curr->next;
