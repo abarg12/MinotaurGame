@@ -6,6 +6,18 @@
 
 #define ROWS 32
 #define COLUMNS 32
+#define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
+                         // from a client
+#define START_X 10
+#define START_Y 10
+#define START_D 1 // RIGHT
+#define PLAYER_NAME_LEN 20
+
+typedef enum MessageType {
+    REGISTER = 0,
+    EXIT     = 1,
+    MOVE     = 2,
+} MessageType;
 
 typedef enum ServerState {
     RECEIVE,
@@ -37,7 +49,9 @@ typedef struct PlayerPhysics {
     Direction d; 
 } PlayerPhysics;
 
+// list of players
 typedef struct Player {
+    char name[PLAYER_NAME_LEN];
     PlayerPhysics phys;
     PlayerState player_state;
     int *addr_len;
@@ -45,18 +59,23 @@ typedef struct Player {
     struct Player *next;
 } *Player;
 
-typedef struct PlayerList {
-    int    num_players;
-    Player head;
-    Player tail;
-}*PlayerList;
+// list of move instructions
+typedef struct MoveInstruction {
+    Player p;
+    Direction d;
+    struct MoveInstruction *next;
+} *Move;
 
 typedef struct Game {
-    char        *map;
     int         sockfd;
     GameState   game_state;
     ServerState server_state;
-    PlayerList  player_list;
+    int         num_players;
+    Player      list_head;
+    Player      list_tail;
+    Move        move_head;
+    Move        move_tail;
+    Move        payload_head; // the first move to execute in the new payload
     fd_set      *active_fd_set, *read_fd_set;
     struct timeval **timeout_p;
 } *Game;
@@ -64,6 +83,14 @@ typedef struct Game {
 
 void initialize_game(Game game, int sockfd);
 void clear_all_players(Game game);
+void receive_data(Game game);
+Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr, 
+                       int *clientlen);
+void add_player_to_list(Game game, Player p);
+void register_player(Game game, char *name, struct sockaddr_in *clientaddr, int *clientlen);
+void print_players(Game game);
+void remove_player(Game game, char *name);
+
 
 
 #endif
