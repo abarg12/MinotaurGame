@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     
     if (argc == 1) {
         sd.hostname = "comp112-05.cs.tufts.edu";
-        sd.port_num = 9051;
+        sd.port_num = 9040;
     } else if (argc == 3) {
         sd.hostname = argv[1];
         sd.port_num = atoi(argv[2]); 
@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
     /* build the server's Internet address */
     bzero((char *) &(sd.serveraddr), sizeof(sd.serveraddr));
     sd.serveraddr.sin_family = AF_INET;
-    bcopy((char *)sd.server->h_addr, 
-    (char *)&sd.serveraddr.sin_addr.s_addr, sd.server->h_length);
+    bcopy((char *)(sd.server)->h_addr, 
+    (char *)&(sd.serveraddr.sin_addr.s_addr), (sd.server)->h_length);
     sd.serveraddr.sin_port = htons(sd.port_num);
 
 
@@ -168,7 +168,15 @@ void registration_rq(ServerData sd, char *player_name) {
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
 
-    sendto(sd.sockfd, rrq, 21, 0, (struct sockaddr *) &sd.serveraddr, sd.serverlen);
+    n = sendto(sd.sockfd, rrq, 21, 0, (struct sockaddr *) &(sd.serveraddr), sd.serverlen);
+    if (n < 0) {
+        fprintf(stderr, "sendto error\n");
+        fprintf(stderr, player_name);
+        fprintf(stderr, "%d\n", sd.sockfd);
+        fprintf(stderr, "%d\n", sd.serverlen);
+        fprintf(stderr, "%d\n", sd.serveraddr);
+        exit(1);
+    }
     // TODO: connect to server to get start signal
     
     buf[0] = 5;
