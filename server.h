@@ -40,8 +40,6 @@ typedef enum PlayerState {
 } PlayerState;
 
 // list of players
-// todo: should each player have his own list of moves, where only the tail gets executed? handles case where more than one move is captured in tick interval, and so can easily track the 'last' move for each player
-// then payload to execute is the tail of all active players' moves
 typedef struct Player {
     char name[PLAYER_NAME_LEN];
     PlayerPhysics phys;
@@ -49,15 +47,9 @@ typedef struct Player {
     int *addr_len;
     struct sockaddr_in *player_addr;
     struct Player *next;
-    struct Move *move; // can replace so we always execute the latest one
-    int move_num;
+    Direction d; // update when get a move instruction
+    int    last_move; // prevents server from executing an out of order move
 } *Player;
-
-// list of move instructions
-typedef struct MoveInstruction {
-    Player p;
-    Direction d;
-} *Move;
 
 // typedef struct Frame {
 //     int sequence_num;
@@ -73,9 +65,6 @@ typedef struct Game {
     int         num_registered_players; // those playing and spectating
     Player      players_head;
     Player      players_tail;
-    Move        moves_head;
-    Move        moves_tail;
-    Move        payload_head; // the first move to execute in the new payload
     fd_set      *active_fd_set, *read_fd_set;
     struct timeval **timeout_p;
 } *Game;

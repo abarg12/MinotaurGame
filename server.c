@@ -216,12 +216,6 @@ void initialize_game(Game game, int sockfd)
     game->players_tail = NULL;
     clear_all_players(game);
 
-    // moves
-    game->moves_head = NULL;
-    game->moves_tail = NULL;
-    // todo: delete all the moves?
-    // clear_all_moves(game);
-
     // states
     game->game_state   = WAITING;
     game->server_state = RECEIVE;
