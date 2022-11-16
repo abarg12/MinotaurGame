@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
     WINDOW *game_window;
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_WHITE);
+    init_pair(2, COLOR_RED, COLOR_BLACK);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
                 //pstate = play_loop();
                 map = malloc(GWIDTH * GHEIGHT);
                 // TODO: make this dynamic
-                download_map("../maps/map1");                
+                download_map("../maps/map2");                
                 draw_map(game_window);
                 sleep(15);
                 sentinel = 0;
@@ -174,13 +175,13 @@ void registration_rq(ServerData *sd, char *player_name) {
     // TODO: connect to server to get start signal
     
     //buf[0] = 5;
-    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+    //n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
 
     // Get game start notification
-    if (buf[0] != 5) {
-        fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
-        exit(1);
-    }
+    //if (buf[0] != 5) {
+     //   fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
+      //  exit(1);
+    //}
 
     return;
 }
@@ -211,11 +212,17 @@ void draw_map(WINDOW *game_window) {
 
     int x, y;
     char val;
+    int minotaurx = 45;
+    int minotaury = 13;
     for (y = 0; y < GHEIGHT; y++) {
         wmove(game_window, y, 0);
         for (x = 0; x < GWIDTH; x++) {
            val = map[x + (GWIDTH * y)];
-           if (val == '1') {
+           if (x == minotaurx && y == minotaury) {
+               wattron(game_window, COLOR_PAIR(2));
+               waddch(game_window, 'M');
+               wattroff(game_window, COLOR_PAIR(2));
+           } else if (val == '1') {
                wattron(game_window, COLOR_PAIR(1));
                waddch(game_window, '.');
                wattroff(game_window, COLOR_PAIR(1));
