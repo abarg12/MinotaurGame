@@ -12,11 +12,16 @@
 #include "client.h"
 
 #define BUFSIZE 533
+#define GHEIGHT 28
+#define GWIDTH  96
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
+void download_map(char *map_name);
+void draw_map(WINDOW *game_window);
 
+char *map;
 
 int main(int argc, char **argv) {
 /*    
@@ -70,6 +75,8 @@ int main(int argc, char **argv) {
     curs_set(2);
     refresh();
     WINDOW *game_window;
+    start_color();
+    init_pair(1, COLOR_WHITE, COLOR_WHITE);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -79,7 +86,18 @@ int main(int argc, char **argv) {
                 pstate = lobby_loop(&sd, game_window, player_name);
                 break;
             }
-            
+
+            case PLAYING: {
+                //pstate = play_loop();
+                map = malloc(GWIDTH * GHEIGHT);
+                // TODO: make this dynamic
+                download_map("../maps/map1");                
+                draw_map(game_window);
+                sleep(15);
+                sentinel = 0;
+                break;
+            }
+
             default: {
                 fprintf(stderr, "case not handled\n");
                 client_exit(game_window);
@@ -95,7 +113,7 @@ int main(int argc, char **argv) {
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     // Set up lobby UI
-    game_window = newwin(32, 96, 3, 0);
+    game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
     mvwprintw(game_window, 2, 3, "Minotaur Lobby\n");
     mvwprintw(game_window, 4, 3, "Connected to server with address: %s\n", sd->hostname); 
     //mvwprintw(game_window, 5, 3, "screensize = %d, %d\n", LINES, COLS);
@@ -127,12 +145,12 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         client_exit(game_window);
         exit(0);
     } else {
-        registration_rq(sd, player_name);
         mvwprintw(game_window, 6, 3, "Sent request to game server");
+        mvwprintw(game_window, 7, 3, "Waiting for game to start");
         wrefresh(game_window);
-        sleep(1);
-        client_exit(game_window);
-        exit(0);
+        registration_rq(sd, player_name);
+        delwin(game_window);
+        return PLAYING;
     }
     
     delwin(game_window);
@@ -155,8 +173,9 @@ void registration_rq(ServerData *sd, char *player_name) {
     }
     // TODO: connect to server to get start signal
     
-    buf[0] = 5;
-    // n = recvfrom(sd.sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd.serveraddr, &sd.serverlen);
+    //buf[0] = 5;
+    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+
     // Get game start notification
     if (buf[0] != 5) {
         fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
@@ -172,5 +191,39 @@ void registration_rq(ServerData *sd, char *player_name) {
 void client_exit(WINDOW *game_window) {
     delwin(game_window);
     endwin();
+}
+
+
+void download_map(char *map_name) {
+    FILE *fptr = fopen(map_name, "rb");
+    if (fptr == NULL) {
+        fprintf(stderr, "Map does not exist at specified location\n");
+        exit(1);
+    }
+
+    int n = fread(map, 1, GWIDTH * GHEIGHT, fptr);
+    fclose(fptr);
+}
+
+
+void draw_map(WINDOW *game_window) {
+    game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
+
+    int x, y;
+    char val;
+    for (y = 0; y < GHEIGHT; y++) {
+        wmove(game_window, y, 0);
+        for (x = 0; x < GWIDTH; x++) {
+           val = map[x + (GWIDTH * y)];
+           if (val == '1') {
+               wattron(game_window, COLOR_PAIR(1));
+               waddch(game_window, '.');
+               wattroff(game_window, COLOR_PAIR(1));
+           } else if (val == '0') {
+               waddch(game_window, ' '); 
+           }
+        }
+    }
+    wrefresh(game_window);
 }
 
