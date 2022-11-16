@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include "game_logic.h"
+
 #define ROWS 32
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
@@ -37,19 +39,6 @@ typedef enum PlayerState {
     PLAYING,
 } PlayerState;
 
-typedef enum Direction {
-    UP,
-    RIGHT,
-    DOWN,
-    LEFT, 
-} Direction; 
-
-typedef struct PlayerPhysics {
-    int x;
-    int y;
-    Direction d; 
-} PlayerPhysics;
-
 // list of players
 // todo: should each player have his own list of moves, where only the tail gets executed? handles case where more than one move is captured in tick interval, and so can easily track the 'last' move for each player
 // then payload to execute is the tail of all active players' moves
@@ -60,15 +49,21 @@ typedef struct Player {
     int *addr_len;
     struct sockaddr_in *player_addr;
     struct Player *next;
+    struct Move *move; // can replace so we always execute the latest one
+    int move_num;
 } *Player;
 
 // list of move instructions
 typedef struct MoveInstruction {
     Player p;
     Direction d;
-    bool processed;
-    struct MoveInstruction *next;
 } *Move;
+
+// typedef struct Frame {
+//     int sequence_num;
+//     int num_players;
+//     char pla
+// } *Frame;
 
 typedef struct Game {
     int         sockfd;
@@ -85,10 +80,12 @@ typedef struct Game {
     struct timeval **timeout_p;
 } *Game;
 
+// yet another linked list of frames returned by game logic module
+// frames need to be assigned a sequence number
 
 void initialize_game(Game game, int sockfd);
 void clear_all_players(Game game);
-void clear_all_moves(Game game);
+// void clear_all_moves(Game game);
 bool receive_data(Game game);
 Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr, 
                        int *clientlen);

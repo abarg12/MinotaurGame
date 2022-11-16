@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include "server.h"
+// #include "game_logic.h"
 
 
 int main (int argc, char **argv) 
@@ -124,7 +125,6 @@ bool receive_data(Game game)
             break;
         }
     }
-
 }
 
 // add the move instruction to a payload 
@@ -245,14 +245,14 @@ void clear_all_players(Game game)
     }
 }
 
-void clear_all_moves(Game game)
-{   
-    Move curr = game->moves_head;
-    while (curr != NULL) {
-        free(curr);
-        curr = curr->next;
-    }
-}
+// void clear_all_moves(Game game)
+// {   
+//     Move curr = game->moves_head;
+//     while (curr != NULL) {
+//         free(curr);
+//         curr = curr->next;
+//     }
+// }
 
 void print_players(Game game)
 {
