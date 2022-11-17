@@ -11,9 +11,6 @@
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
-#define START_X 10
-#define START_Y 10
-#define START_D 1 // RIGHT
 #define PLAYER_NAME_LEN 20
 
 typedef enum MessageType {

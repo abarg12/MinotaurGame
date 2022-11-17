@@ -6,6 +6,10 @@
 #define MHEIGHT 28
 #define MWIDTH  96
 
+#define START_X 10
+#define START_Y 10
+#define START_D 1 // RIGHT
+
 // forward declarations, i.e "will be defined later"
 typedef struct Game *Game; 
 typedef struct Player *Player;
