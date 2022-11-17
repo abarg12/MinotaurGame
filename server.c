@@ -1,12 +1,7 @@
 /*** server.c ***/
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <unistd.h>
+
 #include "server.h"
-// #include "game_logic.h"
+#include "game_logic.h" // todo verify this is right
 
 
 int main (int argc, char **argv) 
@@ -27,7 +22,6 @@ int main (int argc, char **argv)
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0) 
 		fprintf(stderr, "ERROR opening socket");
-	// fprintf(stderr, "sockfd %d\n", sockfd);
 	optval = 1;
 	setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, 
 			  (const void *)&optval , sizeof(int));
@@ -48,13 +42,16 @@ int main (int argc, char **argv)
     initialize_game(game, sockfd);
 
     while(1) {
+        
         game->read_fd_set = game->active_fd_set;
-        switch(game->server_state) 
-        {
+
+        switch(game->server_state) {
+
             // handles: register client, exit client, move instruction
             case RECEIVE: {
                 bool timed_out = receive_data(game);
-                if (timed_out) {
+
+                if (game->game_state = IN_PLAY && timed_out) {
                     game->server_state = UPDATE;
                     // reset the timeout for the next tick
                 }
@@ -73,7 +70,7 @@ int main (int argc, char **argv)
     }
 }
 
-// todo review the valgrind initialization error for:
+// todo review the valgrind initialization error for 'sockaddr_in'
 // struct sockaddr_in {
 //     sa_family_t    sin_family; /* address family: AF_INET */
 //     in_port_t      sin_port;   /* port in network byte order */
@@ -98,10 +95,11 @@ bool receive_data(Game game)
 		fprintf(stderr, "error in Select\n");
 	}
 
-    // if (timedout in select call)
+    // if (timedout in select call and game is in_play)
     // return true; 
 
-	int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, (struct sockaddr *) clientaddr, clientlen);
+	int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, 
+                    (struct sockaddr *) clientaddr, clientlen);
 	if (n < 0)
 		fprintf(stderr, "ERROR in recvfrom\n");
 
@@ -112,6 +110,7 @@ bool receive_data(Game game)
                            clientlen);
             start_game(game);
             print_players(game);
+            print_game_state(game);
             break;
         }
 
@@ -128,117 +127,40 @@ bool receive_data(Game game)
             break;
         }
     }
+    return false;
 }
 
-bool start_game(Game game) 
+void print_game_state(Game game)
 {
-    
-}
-
-
-// adds the next move to execute to a player's struct
-void register_move(Game game, char *buf)
-{
-    Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
-    
-    if (found_p != NULL) {
-        Direction d = (Direction)buf + MOVE_INSTR_INDEX;
-        
-        if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
-            int move_sequence = atoi(buf + MOVE_SEQUENCE_INDEX);
-            if (move_sequence > found_p->last_move) {
-                found_p->phys.d = d;
-                found_p->last_move = move_sequence;
-            }
-        }
-
-    } else {
-        fprintf(stderr, "Player not registerd!\n");
-    }
-}
-
-// find and return a player by name in the list of registered players.
-// if player not found, return null.
-Player find_player(Game game, char *name)
-{
-    Player curr = game->players_head;
-    while (curr != NULL) {
-        if (strncmp(curr->name, name, PLAYER_NAME_LEN) == 0) {
-            return curr;
-        }
-        curr = curr->next;
-    }
-    return NULL;
-}
-
-// registers a player in the game
-void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
-                     int *clientlen)
-{   
-   Player new_p = create_new_player(game, name, clientaddr, clientlen);
-   add_player_to_list(game, new_p);
-}
-
-// adds a given player to list of players
-void add_player_to_list(Game game, Player p)
-{
-    // list is empty, add to front
-    if (game->players_head == NULL) {
-        game->players_head = p;
-        game->players_tail = p;
-    
-    // add to end
-    } else {
-        game->players_tail->next = p;
-        game->players_tail = p;
-    }
-    game->num_registered_players++;
-}
-
-Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr, 
-                         int *clientlen)
-{
-    Player new_p = malloc(sizeof(*new_p));
-    assert(new_p != NULL);
-
-    strncpy(new_p->name, name, PLAYER_NAME_LEN);
-
-    new_p->phys.x = START_X;
-    new_p->phys.y = START_Y;
-    new_p->phys.d = START_D;
-    
-    new_p->player_state = SPECTATING;
-
-    new_p->addr_len    = clientlen;
-    new_p->player_addr = clientaddr;
-
-    new_p->next = NULL;
-
-    return new_p;
-}
-
-// remove a player based on the name
-void remove_player(Game game, char *name)
-{
-    fprintf(stderr, "removing player %s\n", name );
-    Player curr = game->players_head;
-    Player prev = curr;
-    while (curr != NULL) {
-        if (strcmp(curr->name, name) == 0) {
-            if (curr == game->players_head) {
-                game->players_head = curr->next;
-            } else if (curr == game->players_tail) {
-                game->players_tail = prev;
-            } else {
-                prev->next = curr->next;
-            }
-            free(curr);
+    char game_state[15] = {0};
+    switch(game->game_state) {
+        case WAITING:
+            strcpy(game_state, "WAITING");
             break;
-        }
-        prev = curr;
-        curr = curr->next;
+        case IN_PLAY:
+            strcpy(game_state, "IN_PLAY");
+            break;
+        case END_OF_GAME:
+            strcpy(game_state, "END_OF_GAME");
+            break;
     }
-    game->num_registered_players--;
+    fprintf(stderr, "Game State: %s\n", game_state);
+}
+// determines if the game can start based on the number of registered players
+// and changes the game state to "IN_PLAY" if so
+// and changes the state of two players to "PLAYING"
+void start_game(Game game) 
+{
+    if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
+        Player curr = game->active_p_head;
+        int i = 0;
+        while (curr != NULL && i < 2) {
+             curr->player_state = PLAYING;
+             curr = curr->next;
+             i++;
+        }
+        game->game_state = IN_PLAY;
+    }
 }
 
 // todo: initialize the timeout in an intelligent way
@@ -249,8 +171,11 @@ void initialize_game(Game game, int sockfd)
     game->map = NULL;
 
     // players
-    game->players_head = NULL;
-    game->players_tail = NULL;
+    game->players_head  = NULL;
+    game->players_tail  = NULL;
+    game->active_p_head = game->players_head;
+    game->num_active_players = 0;
+    game->num_registered_players = 0;
     clear_all_players(game);
 
     // states
@@ -266,30 +191,7 @@ void initialize_game(Game game, int sockfd)
 }
 
 
-// todo: update counts of registered/active players
-void clear_all_players(Game game)
-{   
-    Player curr = game->players_head;
-    while (curr != NULL) {
-        free(curr);
-        curr = curr->next;
-    }
-}
 
-void print_players(Game game)
-{
-    if (game->players_head == NULL)
-        fprintf(stderr, "no players \n");
-    else {
-        fprintf(stderr, "players:\n");
-
-        Player curr = game->players_head;
-        while (curr != NULL) {
-            fprintf(stderr, "%s\n", curr->name);
-            curr = curr->next;
-        }
-    }
-}
 
 
 

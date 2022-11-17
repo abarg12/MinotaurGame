@@ -1,9 +1,23 @@
 #ifndef PLAYER_HEADER
 #define PLAYER_HEADER
 
-#include "game_logic.h"
+#include <assert.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 
+#include "game_logic.h"
+#include "server.h"
+
+#define MOVE_INSTR_INDEX 25
+#define MOVE_SEQUENCE_INDEX 21
+#define PLAYER_NAME_INDEX 1
 #define PLAYER_NAME_LEN 20
+
+// typedef struct Game *Game;
 
 typedef enum PlayerState {
     SPECTATING,

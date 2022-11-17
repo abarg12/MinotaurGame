@@ -4,7 +4,12 @@
 
 #include <assert.h>
 #include <stdbool.h>
-
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <unistd.h>
 #include "player.h"
 #include "game_logic.h"
 
@@ -12,6 +17,7 @@
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
+#define MAX_ACTIVE_PLAYERS 2
 #define MOVE_INSTR_INDEX 25
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
@@ -36,7 +42,6 @@ typedef enum GameState {
     END_OF_GAME,
 } GameState;
 
-
 typedef struct Game {
     int         sockfd;
     GameState   game_state;
@@ -45,6 +50,7 @@ typedef struct Game {
     int         num_registered_players; // those playing and spectating
     Player      players_head;
     Player      players_tail;
+    Player      active_p_head;          // first active player
     fd_set      *active_fd_set, *read_fd_set;
     char        *map;
     struct timeval **timeout_p;
@@ -58,11 +64,9 @@ typedef struct Game {
 //     char pla
 // } *Frame;
 
-bool start_game(Game game);
+void start_game(Game game);
 void initialize_game(Game game, int sockfd);
 bool receive_data(Game game);
-
-
-
+void print_game_state(Game game);
 
 #endif
