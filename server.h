@@ -5,16 +5,18 @@
 #include <assert.h>
 #include <stdbool.h>
 
+#include "player.h"
 #include "game_logic.h"
 
 #define ROWS 32
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
-#define PLAYER_NAME_LEN 20
 #define MOVE_INSTR_INDEX 25
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
+
+typedef struct Player *Player;
 
 typedef enum MessageType {
     REGISTER = 0,
@@ -34,28 +36,6 @@ typedef enum GameState {
     END_OF_GAME,
 } GameState;
 
-typedef enum PlayerState {
-    SPECTATING,
-    PLAYING,
-} PlayerState;
-
-// list of players
-typedef struct Player {
-    char name[PLAYER_NAME_LEN];
-    PlayerPhysics phys;
-    PlayerState player_state;
-    int *addr_len;
-    struct sockaddr_in *player_addr;
-    Direction d; // update when get a move instruction
-    int last_move; // prevents server from executing an out of order move
-    struct Player *next;
-} *Player;
-
-// typedef struct Frame {
-//     int sequence_num;
-//     int num_players;
-//     char pla
-// } *Frame;
 
 typedef struct Game {
     int         sockfd;
@@ -72,18 +52,16 @@ typedef struct Game {
 
 // yet another linked list of frames returned by game logic module
 // frames need to be assigned a sequence number
+// typedef struct Frame {
+//     int sequence_num;
+//     int num_players;
+//     char pla
+// } *Frame;
 
+bool start_game(Game game);
 void initialize_game(Game game, int sockfd);
-void clear_all_players(Game game);
-// void clear_all_moves(Game game);
 bool receive_data(Game game);
-Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr, 
-                       int *clientlen);
-void add_player_to_list(Game game, Player p);
-void register_player(Game game, char *name, struct sockaddr_in *clientaddr, int *clientlen);
-void register_move(Game game, char *buf);
-void print_players(Game game);
-void remove_player(Game game, char *name);
+
 
 
 

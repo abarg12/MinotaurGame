@@ -110,6 +110,7 @@ bool receive_data(Game game)
             fprintf(stderr, "register player\n");
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
+            start_game(game);
             print_players(game);
             break;
         }
@@ -129,18 +130,24 @@ bool receive_data(Game game)
     }
 }
 
+bool start_game(Game game) 
+{
+    
+}
+
+
 // adds the next move to execute to a player's struct
 void register_move(Game game, char *buf)
 {
     Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
     
     if (found_p != NULL) {
-        Direction d = buf + MOVE_INSTR_INDEX;
+        Direction d = (Direction)buf + MOVE_INSTR_INDEX;
         
-        if (d == UP || d == RIGHT || d == DOWN || d = LEFT) {
+        if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
             int move_sequence = atoi(buf + MOVE_SEQUENCE_INDEX);
             if (move_sequence > found_p->last_move) {
-                found_p->d = d;
+                found_p->phys.d = d;
                 found_p->last_move = move_sequence;
             }
         }
@@ -154,7 +161,7 @@ void register_move(Game game, char *buf)
 // if player not found, return null.
 Player find_player(Game game, char *name)
 {
-    Player curr = game->player_head;
+    Player curr = game->players_head;
     while (curr != NULL) {
         if (strncmp(curr->name, name, PLAYER_NAME_LEN) == 0) {
             return curr;
