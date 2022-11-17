@@ -12,6 +12,9 @@
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
 #define PLAYER_NAME_LEN 20
+#define MOVE_INSTR_INDEX 25
+#define MOVE_SEQUENCE_INDEX 21
+#define PLAYER_NAME_INDEX 1
 
 typedef enum MessageType {
     REGISTER = 0,
@@ -43,9 +46,9 @@ typedef struct Player {
     PlayerState player_state;
     int *addr_len;
     struct sockaddr_in *player_addr;
-    struct Player *next;
     Direction d; // update when get a move instruction
-    int    last_move; // prevents server from executing an out of order move
+    int last_move; // prevents server from executing an out of order move
+    struct Player *next;
 } *Player;
 
 // typedef struct Frame {
@@ -63,6 +66,7 @@ typedef struct Game {
     Player      players_head;
     Player      players_tail;
     fd_set      *active_fd_set, *read_fd_set;
+    char        *map;
     struct timeval **timeout_p;
 } *Game;
 

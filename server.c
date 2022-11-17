@@ -62,6 +62,7 @@ int main (int argc, char **argv)
             }
             
             case UPDATE: {
+
                 break;
             }
             
@@ -72,6 +73,7 @@ int main (int argc, char **argv)
     }
 }
 
+// todo review the valgrind initialization error for:
 // struct sockaddr_in {
 //     sa_family_t    sin_family; /* address family: AF_INET */
 //     in_port_t      sin_port;   /* port in network byte order */
@@ -80,13 +82,12 @@ int main (int argc, char **argv)
 
 // will change states using select()
 // only change to 'update' state when the timeout elapses
-// else, stay in the state to get more input (move instr) from clients (same of diff)
+// else, stay in the state to get more input (move instr) from clients (same or diff)
 bool receive_data(Game game)
 {
     char buf[MAX_CLIENT_MSG];
 	bzero(buf, MAX_CLIENT_MSG);
     
-    // todo review the valgrind initialization error
     struct sockaddr_in *clientaddr = malloc(sizeof(*clientaddr));
     assert (clientaddr != NULL);
     int *clientlen = malloc(sizeof(*clientlen));
@@ -107,14 +108,15 @@ bool receive_data(Game game)
     switch (buf[0]) {
         case REGISTER: {
             fprintf(stderr, "register player\n");
-            register_player(game, buf + 1, clientaddr, clientlen);
+            register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
+                           clientlen);
             print_players(game);
             break;
         }
 
         case EXIT: {
             fprintf(stderr, "exit\n");
-            remove_player(game, buf + 1);
+            remove_player(game, buf + PLAYER_NAME_INDEX);
             print_players(game);
             break;
         }
@@ -127,15 +129,40 @@ bool receive_data(Game game)
     }
 }
 
-// add the move instruction to a payload 
-// find the player by name first
-// create new moveInstruction struct
-// need to keep tabs on which is the next instruction to execute,
+// adds the next move to execute to a player's struct
 void register_move(Game game, char *buf)
 {
+    Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
+    
+    if (found_p != NULL) {
+        Direction d = buf + MOVE_INSTR_INDEX;
+        
+        if (d == UP || d == RIGHT || d == DOWN || d = LEFT) {
+            int move_sequence = atoi(buf + MOVE_SEQUENCE_INDEX);
+            if (move_sequence > found_p->last_move) {
+                found_p->d = d;
+                found_p->last_move = move_sequence;
+            }
+        }
 
+    } else {
+        fprintf(stderr, "Player not registerd!\n");
+    }
 }
 
+// find and return a player by name in the list of registered players.
+// if player not found, return null.
+Player find_player(Game game, char *name)
+{
+    Player curr = game->player_head;
+    while (curr != NULL) {
+        if (strncmp(curr->name, name, PLAYER_NAME_LEN) == 0) {
+            return curr;
+        }
+        curr = curr->next;
+    }
+    return NULL;
+}
 
 // registers a player in the game
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
@@ -211,6 +238,9 @@ void remove_player(Game game, char *name)
 // todo: might need better logic for initializing players
 void initialize_game(Game game, int sockfd)
 {
+    // map
+    game->map = NULL;
+
     // players
     game->players_head = NULL;
     game->players_tail = NULL;
@@ -238,15 +268,6 @@ void clear_all_players(Game game)
         curr = curr->next;
     }
 }
-
-// void clear_all_moves(Game game)
-// {   
-//     Move curr = game->moves_head;
-//     while (curr != NULL) {
-//         free(curr);
-//         curr = curr->next;
-//     }
-// }
 
 void print_players(Game game)
 {
