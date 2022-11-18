@@ -133,6 +133,9 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         // The game select loop blocks until user input or map is received
         if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
             fprintf(stderr, "ERRNO: %d, select error\n", errno);
+            if (errno == 4) {
+                continue;
+            }
             exit(1);
         }
     
