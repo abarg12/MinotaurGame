@@ -10,7 +10,7 @@
 #define MHEIGHT 28
 #define MWIDTH  96
 
-void load_map(char *file_name, char *map) {
+void load_map(char *file_name, Game g) {
     FILE *fptr = fopen(file_name, "rb");
     if (fptr == NULL) {
         fprintf(stderr, "Map does not exist at specified location\n");

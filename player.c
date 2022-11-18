@@ -8,10 +8,12 @@ void register_move(Game game, char *buf)
     Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
     
     if (found_p != NULL) {
+        fprintf(stderr, "found player\n");
         Direction d = (Direction)buf + MOVE_INSTR_INDEX;
         
         if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
-            int move_sequence = atoi(buf + MOVE_SEQUENCE_INDEX);
+            int move_sequence = ntohl(atoi(buf + MOVE_SEQUENCE_INDEX));
+            fprintf(stderr, "move sequence %d\n", move_sequence);
             if (move_sequence > found_p->last_move) {
                 found_p->phys.d = d;
                 found_p->last_move = move_sequence;

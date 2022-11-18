@@ -49,8 +49,8 @@ typedef struct Game {
     int         num_active_players;     // those currently playing
     int         num_registered_players; // those playing and spectating
     Player      players_head;
-    Player      players_tail;
-    Player      active_p_head;          // first active player
+    Player      players_tail; // p1 -> p2 -> p3 -> p4
+    Player      active_p_head; // first active player, p3
     fd_set      *active_fd_set, *read_fd_set;
     char        *map;
     struct timeval **timeout_p;
