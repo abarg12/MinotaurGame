@@ -13,7 +13,6 @@
 // forward declarations, i.e "will be defined later"
 typedef struct Game *Game; 
 typedef struct Player *Player;
-typedef struct MoveInstruction *Move;
 typedef enum PlayerState PlayerState;
 typedef enum ServerState ServerState;
 
@@ -31,9 +30,9 @@ typedef struct PlayerPhysics {
 } PlayerPhysics;
 
 // Load the map from a file into the map array 
-void load_map(char *file_name, char *map);
+void load_map(char *file_name, Game g);
 
 // Message 3 from the spec returned
-char *update(Game g, char *map);
+char *update(Game g);
 
 #endif

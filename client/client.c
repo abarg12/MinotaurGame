@@ -20,6 +20,8 @@ void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
 void download_map(char *map_name);
 void draw_map(WINDOW *game_window);
+PlayerState play_loop(ServerData *sd, WINDOW *game_window);
+void parse_move_instr(char *instr);
 
 char *map;
 
@@ -92,9 +94,9 @@ int main(int argc, char **argv) {
                 //pstate = play_loop();
                 map = malloc(GWIDTH * GHEIGHT);
                 // TODO: make this dynamic
-                download_map("../maps/map2");                
+                download_map("../maps/map1");                
                 draw_map(game_window);
-                sleep(15);
+                pstate = play_loop(&sd, game_window); 
                 sentinel = 0;
                 break;
             }
@@ -103,14 +105,74 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "case not handled\n");
                 client_exit(game_window);
                 exit(1);
-
             }
         }
     }
-
-    client_exit(game_window);
+client_exit(game_window);
     return 0;
 }
+
+
+PlayerState play_loop(ServerData *sd, WINDOW *game_window) {
+    fd_set active_fd_set, read_fd_set;    
+    FD_ZERO(&active_fd_set);
+    FD_SET(0, &active_fd_set);
+    FD_SET(sd->sockfd, &active_fd_set);
+    char buf[BUFSIZE];
+    int n;
+
+
+    int game_in_progress = 1;
+    while (game_in_progress) {
+        read_fd_set = active_fd_set;
+        
+        // The game select loop blocks until user input or map is received
+        if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
+            fprintf(stderr, "select error\n");
+            exit(1);
+        }
+    
+        int i;
+        for (i = 0; i < FD_SETSIZE; i++) {
+
+            if (FD_ISSET (i, &read_fd_set)) {
+                move(1,0);
+                clrtoeol();
+                move(0,0);
+                clrtoeol();
+                mvprintw(0,0, "derp");
+                refresh();
+
+                if (i == 0) {
+                    // stdin received
+                    char instr[100];
+                    fgets(instr, 100, stdin);
+
+                    mvprintw(0,0, "move");
+                    refresh();
+
+   
+                    parse_move_instr(instr);
+                }
+                else {
+                    // TODO: map data received, print it out
+                    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+                }
+            }
+        } 
+    }
+}
+
+
+void parse_move_instr(char *instr) {
+    move(1,0);
+    clrtoeol();
+    move(0,0);
+    clrtoeol();
+    mvprintw(0,0, "%s", instr);
+    refresh();
+}
+
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     // Set up lobby UI
@@ -162,7 +224,7 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
 void registration_rq(ServerData *sd, char *player_name) {
     // create the buffer to send to server 
     char rrq[21];
-    char buf[533];
+    char buf[BUFSIZE];
     int n;
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
@@ -172,16 +234,16 @@ void registration_rq(ServerData *sd, char *player_name) {
         fprintf(stderr, "sendto error\n");
         exit(1);
     }
+
     // TODO: connect to server to get start signal
-    
-    //buf[0] = 5;
+    buf[0] = 5;
     //n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
 
     // Get game start notification
-    //if (buf[0] != 5) {
-     //   fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
-      //  exit(1);
-    //}
+    if (buf[0] != 5) {
+        fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
+        exit(1);
+    }
 
     return;
 }
