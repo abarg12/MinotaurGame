@@ -9,6 +9,7 @@
 #include <ncurses.h>
 #include <sys/types.h>
 #include <netdb.h> 
+#include <errno.h>
 #include "client.h"
 
 #define BUFSIZE 533
@@ -23,6 +24,7 @@ void draw_map(WINDOW *game_window);
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
+void send_exit_msg(ServerData *sd, char *player_name);
 
 char *map;
 int move_seq;
@@ -130,7 +132,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         
         // The game select loop blocks until user input or map is received
         if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
-            fprintf(stderr, "select error\n");
+            fprintf(stderr, "ERRNO: %d, select error\n", errno);
             exit(1);
         }
     
@@ -169,6 +171,7 @@ int parse_instr(ServerData *sd, char *player_name) {
 
     // return -1 if client presses 'escape' (27) or 'q' (113)
     if (key == 27 || key == 113) {
+        send_exit_msg(sd, player_name);
         return -1;
     } else if (key == 65 || key == 119) {
         // case for up arrow or 'w'
@@ -190,6 +193,26 @@ int parse_instr(ServerData *sd, char *player_name) {
         // TODO: the rest of the cases based on user input
     }
 }
+
+
+void send_exit_msg(ServerData *sd, char *player_name) {
+    InstrStruct st_msg;
+    st_msg.type = 1;
+    bzero(st_msg.ID, 20);
+    memcpy(st_msg.ID, player_name, 20);
+
+    char *msg_arr;
+    msg_arr = (char *) &st_msg;
+    
+    int n;
+    n = sendto(sd->sockfd, msg_arr, 533, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
+    if (n < 0) {
+            fprintf(stderr, "error in sending move instruction\n");
+            exit(1);
+    }
+}
+
+
 
 void send_mv_inst(ServerData *sd, char *player_name, char move_type) {
         int seq_no = htonl(move_seq);
