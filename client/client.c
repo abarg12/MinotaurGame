@@ -173,17 +173,21 @@ int parse_instr(ServerData *sd, char *player_name) {
     } else if (key == 65 || key == 119) {
         // case for up arrow or 'w'
         send_mv_inst(sd, player_name, 0); 
+        move_seq = move_seq + 1;
     } else if (key == 67 || key == 100) {
         // case for right arrow or 'd'
         send_mv_inst(sd, player_name, 1); 
+        move_seq = move_seq + 1;
     } else if (key == 66 || key == 115) {
         // case for down arrow or 's'
         send_mv_inst(sd, player_name, 2); 
+        move_seq = move_seq + 1;
     } else if (key == 68 || key == 97) {
         // case for left arrow or 'a'
         send_mv_inst(sd, player_name, 3); 
+        move_seq = move_seq + 1;
     } else {
-        return -1;
+        // TODO: the rest of the cases based on user input
     }
 }
 
