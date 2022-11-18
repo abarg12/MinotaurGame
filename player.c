@@ -8,7 +8,7 @@ void register_move(Game game, char *buf)
     Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
     
     if (found_p != NULL) {
-        fprintf(stderr, "found player\n");
+        fprintf(stderr, "found player %s\n", found_p->name);
         Direction d = (Direction)buf + MOVE_INSTR_INDEX;
         
         if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
@@ -69,6 +69,7 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
     Player new_p = malloc(sizeof(*new_p));
     assert(new_p != NULL);
 
+    bzero(new_p->name, PLAYER_NAME_LEN);
     strncpy(new_p->name, name, PLAYER_NAME_LEN);
 
     new_p->phys.x = START_X;
