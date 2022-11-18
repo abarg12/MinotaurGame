@@ -20,10 +20,12 @@ void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
 void download_map(char *map_name);
 void draw_map(WINDOW *game_window);
-PlayerState play_loop(ServerData *sd, WINDOW *game_window);
-void parse_move_instr(char *instr);
+PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
+int parse_instr(ServerData *sd, char *player_name);
+void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 
 char *map;
+int move_seq;
 
 int main(int argc, char **argv) {
 /*    
@@ -91,12 +93,11 @@ int main(int argc, char **argv) {
             }
 
             case PLAYING: {
-                //pstate = play_loop();
                 map = malloc(GWIDTH * GHEIGHT);
                 // TODO: make this dynamic
                 download_map("../maps/map1");                
                 draw_map(game_window);
-                pstate = play_loop(&sd, game_window); 
+                pstate = play_loop(&sd, game_window, player_name); 
                 sentinel = 0;
                 break;
             }
@@ -113,13 +114,14 @@ client_exit(game_window);
 }
 
 
-PlayerState play_loop(ServerData *sd, WINDOW *game_window) {
+PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     fd_set active_fd_set, read_fd_set;    
     FD_ZERO(&active_fd_set);
     FD_SET(0, &active_fd_set);
     FD_SET(sd->sockfd, &active_fd_set);
     char buf[BUFSIZE];
     int n;
+    move_seq = 0;
 
 
     int game_in_progress = 1;
@@ -136,23 +138,12 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window) {
         for (i = 0; i < FD_SETSIZE; i++) {
 
             if (FD_ISSET (i, &read_fd_set)) {
-                move(1,0);
-                clrtoeol();
-                move(0,0);
-                clrtoeol();
-                mvprintw(0,0, "derp");
-                refresh();
-
                 if (i == 0) {
-                    // stdin received
-                    char instr[100];
-                    fgets(instr, 100, stdin);
-
-                    mvprintw(0,0, "move");
-                    refresh();
-
-   
-                    parse_move_instr(instr);
+                    // exit when parse int returns -1
+                    if (parse_instr(sd, player_name) < 0) {
+                        client_exit(game_window);
+                        exit(0);
+                    }
                 }
                 else {
                     // TODO: map data received, print it out
@@ -164,13 +155,58 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window) {
 }
 
 
-void parse_move_instr(char *instr) {
-    move(1,0);
-    clrtoeol();
+int parse_instr(ServerData *sd, char *player_name) {
+    // stdin received
+    int len, n;
+    char instr[50];
+    len = read(0, instr, 50);
+
+    char key = instr[len - 1]; 
     move(0,0);
     clrtoeol();
-    mvprintw(0,0, "%s", instr);
-    refresh();
+    printw("%d: %d", len, key);
+    refresh(); 
+
+    // return -1 if client presses 'escape' (27) or 'q' (113)
+    if (key == 27 || key == 113) {
+        return -1;
+    } else if (key == 65 || key == 119) {
+        // case for up arrow or 'w'
+        send_mv_inst(sd, player_name, 0); 
+    } else if (key == 67 || key == 100) {
+        // case for right arrow or 'd'
+        send_mv_inst(sd, player_name, 1); 
+    } else if (key == 66 || key == 115) {
+        // case for down arrow or 's'
+        send_mv_inst(sd, player_name, 2); 
+    } else if (key == 68 || key == 97) {
+        // case for left arrow or 'a'
+        send_mv_inst(sd, player_name, 3); 
+    } else {
+        return -1;
+    }
+}
+
+void send_mv_inst(ServerData *sd, char *player_name, char move_type) {
+        int seq_no = htonl(move_seq);
+
+        InstrStruct st_msg;
+        st_msg.type = 2;
+        bzero(st_msg.ID, 20);
+        memcpy(st_msg.ID, player_name, 20);
+        bzero(st_msg.DATA, 512);
+        memcpy(st_msg.DATA, &seq_no, sizeof(seq_no));
+        st_msg.DATA[sizeof(seq_no)] = move_type;
+        
+        char *msg_arr;
+        msg_arr = (char *) &st_msg;
+
+        int n;
+        n = sendto(sd->sockfd, msg_arr, 533, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
+        if (n < 0) {
+            fprintf(stderr, "error in sending move instruction\n");
+            exit(1);
+        }
 }
 
 

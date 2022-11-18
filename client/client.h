@@ -22,3 +22,10 @@ typedef struct ServerData {
     struct sockaddr_in serveraddr;
     struct hostent *server;
 } ServerData;
+
+typedef struct __attribute__((__packed__)) InstrStruct {
+    char type;
+    char ID[20];
+    char DATA[512];
+} InstrStruct;
+
