@@ -122,6 +122,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     FD_SET(0, &active_fd_set);
     FD_SET(sd->sockfd, &active_fd_set);
     char buf[BUFSIZE];
+    bzero(buf, BUFSIZE);
     int n;
     move_seq = 0;
 
@@ -153,6 +154,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 else {
                     // TODO: map data received, print it out
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+                    fprintf(stderr, "buf %s\n", buf);
                 }
             }
         } 
