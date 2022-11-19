@@ -69,5 +69,6 @@ void initialize_game(Game game, int sockfd);
 bool receive_data(Game game);
 void print_game_state(Game game);
 void reset_timeout(Game game);
+void send_map(Game game);
 
 #endif

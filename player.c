@@ -84,7 +84,7 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
     
     new_p->player_state = SPECTATING;
 
-    new_p->addr_len    = clientlen;
+    new_p->addr_len   = *clientlen;
     new_p->player_addr = clientaddr;
 
     new_p->next = NULL;

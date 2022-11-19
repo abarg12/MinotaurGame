@@ -1,5 +1,7 @@
 /*** server.c ***/
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "server.h"
 #include "game_logic.h"
 
@@ -42,7 +44,7 @@ int main (int argc, char **argv)
     initialize_game(game, sockfd);
 
     while(1) {
-        FD_SET(game->sockfd, game->active_fd_set); 	// add main socket to set
+        FD_SET(game->sockfd, game->active_fd_set);
 
         switch(game->server_state) {
             case RECEIVE: {
@@ -56,30 +58,54 @@ int main (int argc, char **argv)
             
             case UPDATE: {
                 fprintf(stderr, "Update state\n");
+                send_map(game);
                 return 0;
                 // char *message_to_send = update(game);
+                // game->game_state == SEND;
                 break;
             }
             
             case SEND: {
+                send_map(game);
                 break;
             }
         }
     }
 }
 
-void reset_timeout(Game game)
+// sends the updated coordinates to all the registered clients
+void send_map(Game game)
 {
-    game->timeout->tv_sec = 10;
-    game->timeout->tv_usec = 0;
+    // placeholder
+    char msg[] = "This a message from the server baby!!";
+
+    // 4  = sequence num (int)
+    // 1  = num players (char)
+    // 22 = player name (20 chars) + x, y coordinates (1 char)
+    int msg_size = 4 + 1 + game->num_registered_players * 22;
+
+    Player curr = game->players_head;
+    while (curr != NULL) {
+        if (curr->player_addr == NULL)
+        {
+            fprintf(stderr, "player address is NULL\n");
+        }
+                
+        int bytes = sendto(game->sockfd, msg, sizeof(msg), 0, 
+                (struct sockaddr *) curr->player_addr, curr->addr_len);
+
+        if (bytes < 0)
+            fprintf(stderr, "***ERROR in sendto: %d\n", bytes);
+
+        curr = curr->next;
+    }
 }
 
-// todo review the valgrind initialization error for 'sockaddr_in'
-// struct sockaddr_in {
-//     sa_family_t    sin_family; /* address family: AF_INET */
-//     in_port_t      sin_port;   /* port in network byte order */
-//     struct in_addr sin_addr;   /* internet address */
-// };
+void reset_timeout(Game game)
+{
+    game->timeout->tv_sec = 5;
+    game->timeout->tv_usec = 0;
+}
 
 // will change states using select()
 // only change to 'update' state when the timeout elapses
@@ -91,10 +117,13 @@ bool receive_data(Game game)
     
     struct sockaddr_in *clientaddr = malloc(sizeof(*clientaddr));
     assert (clientaddr != NULL);
-    int *clientlen = malloc(sizeof(*clientlen));
+    bzero(clientaddr, sizeof(struct sockaddr_in));
+
+    // WHOA: must populate len before calling recvfrom, can't leave it 0
+    int *clientlen = malloc(sizeof(int));
+    *clientlen = sizeof(*clientaddr);
     assert(clientlen != NULL);
 
-    fprintf(stderr, "waiting on select in receive_data \n");
     /* Block until input arrives on an active socket or if timeout expires. */
 	if (select (FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) < 
         0) {
@@ -109,12 +138,14 @@ bool receive_data(Game game)
 
 	int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, 
                     (struct sockaddr *) clientaddr, clientlen);
+
 	if (n < 0)
 		fprintf(stderr, "ERROR in recvfrom\n");
 
+    fprintf(stderr, "client address: %s, %d\n", inet_ntoa (clientaddr->sin_addr), ntohs (clientaddr->sin_port));
+    
     switch (buf[0]) {
         case REGISTER: {
-            fprintf(stderr, "register player\n");
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
             start_game(game);
@@ -124,16 +155,13 @@ bool receive_data(Game game)
         }
 
         case EXIT: {
-            fprintf(stderr, "exit\n");
             remove_player(game, buf + PLAYER_NAME_INDEX);
             print_players(game);
             break;
         }
 
         case MOVE: {
-            fprintf(stderr, "move\n");
             register_move(game, buf);
-
             break;
         }
     }
@@ -203,7 +231,7 @@ void initialize_game(Game game, int sockfd)
     // timeout
     game->timeout = malloc(sizeof(struct timeval));
     assert(game->timeout != NULL);
-    game->timeout->tv_sec = 10;
+    game->timeout->tv_sec = 5;
     game->timeout->tv_usec = 0;
 }
 

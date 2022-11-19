@@ -29,7 +29,7 @@ typedef struct Player {
     char name[PLAYER_NAME_LEN];
     PlayerPhysics phys;
     PlayerState player_state;
-    int *addr_len;
+    int addr_len;
     struct sockaddr_in *player_addr;
     int last_move; // prevents server from executing an out of order move
     struct Player *next;
