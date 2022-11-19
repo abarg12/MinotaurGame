@@ -53,7 +53,7 @@ typedef struct Game {
     Player      active_p_head; // first active player, p3
     fd_set      *active_fd_set, *read_fd_set;
     char        *map;
-    struct timeval **timeout_p;
+    struct timeval *timeout;
 } *Game;
 
 // yet another linked list of frames returned by game logic module
@@ -68,5 +68,6 @@ void start_game(Game game);
 void initialize_game(Game game, int sockfd);
 bool receive_data(Game game);
 void print_game_state(Game game);
+void reset_timeout(Game game);
 
 #endif

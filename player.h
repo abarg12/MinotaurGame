@@ -45,5 +45,6 @@ void register_move(Game game, char *buf);
 void print_players(Game game);
 void remove_player(Game game, char *name);
 void clear_all_players(Game game);
+void print_move_direction(Direction d);
 
 #endif

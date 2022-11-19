@@ -1,7 +1,7 @@
 /*** server.c ***/
 
 #include "server.h"
-#include "game_logic.h" // todo verify this is right
+#include "game_logic.h"
 
 
 int main (int argc, char **argv) 
@@ -12,11 +12,11 @@ int main (int argc, char **argv)
 	struct hostent *hostp; /* client host info */
 	struct timeval *t = NULL;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <port>\n", argv[0]);
+	if (argc != 1) {
+		fprintf(stderr, "usage: %s\n", argv[0]);
 		exit(1);
 	}
-	portno = atoi(argv[1]);
+	portno = 9040;
 
 	/* socket: create the parent socket */
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -42,24 +42,22 @@ int main (int argc, char **argv)
     initialize_game(game, sockfd);
 
     while(1) {
-        
-        game->read_fd_set = game->active_fd_set;
+        FD_SET(game->sockfd, game->active_fd_set); 	// add main socket to set
 
         switch(game->server_state) {
-
-            // handles: register client, exit client, move instruction
             case RECEIVE: {
                 bool timed_out = receive_data(game);
 
-                if (game->game_state = IN_PLAY && timed_out) {
+                if (game->game_state == IN_PLAY && timed_out) {
                     game->server_state = UPDATE;
-                    // reset the timeout for the next tick
                 }
                 break;
             }
             
             case UPDATE: {
-
+                fprintf(stderr, "Update state\n");
+                return 0;
+                // char *message_to_send = update(game);
                 break;
             }
             
@@ -68,6 +66,12 @@ int main (int argc, char **argv)
             }
         }
     }
+}
+
+void reset_timeout(Game game)
+{
+    game->timeout->tv_sec = 10;
+    game->timeout->tv_usec = 0;
 }
 
 // todo review the valgrind initialization error for 'sockaddr_in'
@@ -90,13 +94,18 @@ bool receive_data(Game game)
     int *clientlen = malloc(sizeof(*clientlen));
     assert(clientlen != NULL);
 
+    fprintf(stderr, "waiting on select in receive_data \n");
     /* Block until input arrives on an active socket or if timeout expires. */
-	if (select (FD_SETSIZE, game->read_fd_set, NULL, NULL, NULL) < 0) {
+	if (select (FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) < 
+        0) {
 		fprintf(stderr, "error in Select\n");
 	}
 
-    // if (timedout in select call and game is in_play)
-    // return true; 
+    if (game->timeout->tv_usec == 0) {
+        fprintf(stderr, "timed out\n");
+        reset_timeout(game);
+        return true;
+    }
 
 	int n = recvfrom(game->sockfd, buf, MAX_CLIENT_MSG, 0, 
                     (struct sockaddr *) clientaddr, clientlen);
@@ -124,6 +133,7 @@ bool receive_data(Game game)
         case MOVE: {
             fprintf(stderr, "move\n");
             register_move(game, buf);
+
             break;
         }
     }
@@ -146,15 +156,17 @@ void print_game_state(Game game)
     }
     fprintf(stderr, "Game State: %s\n", game_state);
 }
+
 // determines if the game can start based on the number of registered players
 // and changes the game state to "IN_PLAY" if so
 // and changes the state of two players to "PLAYING"
+// todo to loop back, check if one of the active_p_head == NULL or if == tail
 void start_game(Game game) 
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
         Player curr = game->active_p_head;
         int i = 0;
-        while (curr != NULL && i < 2) {
+        while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
              curr = curr->next;
              i++;
@@ -163,7 +175,6 @@ void start_game(Game game)
     }
 }
 
-// todo: initialize the timeout in an intelligent way
 // todo: might need better logic for initializing players
 void initialize_game(Game game, int sockfd)
 {
@@ -188,6 +199,12 @@ void initialize_game(Game game, int sockfd)
     game->sockfd = sockfd;
     FD_ZERO(game->active_fd_set);    // Initialize set of active sockets.
     FD_SET(game->sockfd, game->active_fd_set); 	// add main socket to set
+
+    // timeout
+    game->timeout = malloc(sizeof(struct timeval));
+    assert(game->timeout != NULL);
+    game->timeout->tv_sec = 10;
+    game->timeout->tv_usec = 0;
 }
 
 

@@ -9,10 +9,15 @@ void register_move(Game game, char *buf)
     
     if (found_p != NULL) {
         fprintf(stderr, "found player %s\n", found_p->name);
-        Direction d = (Direction)buf + MOVE_INSTR_INDEX;
+        Direction d = (Direction)buf[MOVE_INSTR_INDEX];
+        print_move_direction(d);
         
         if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
-            int move_sequence = ntohl(atoi(buf + MOVE_SEQUENCE_INDEX));
+
+            int s;
+            memcpy(&s, buf + MOVE_SEQUENCE_INDEX, 4);
+
+            uint32_t move_sequence = ntohl(s);
             fprintf(stderr, "move sequence %d\n", move_sequence);
             if (move_sequence > found_p->last_move) {
                 found_p->phys.d = d;
@@ -54,6 +59,7 @@ void add_player_to_list(Game game, Player p)
     if (game->players_head == NULL) {
         game->players_head = p;
         game->players_tail = p;
+        game->active_p_head = p;
     
     // add to end
     } else {
@@ -89,25 +95,29 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
 // remove a player based on the name
 void remove_player(Game game, char *name)
 {
-    fprintf(stderr, "removing player %s\n", name );
-    Player curr = game->players_head;
-    Player prev = curr;
-    while (curr != NULL) {
-        if (strcmp(curr->name, name) == 0) {
-            if (curr == game->players_head) {
-                game->players_head = curr->next;
-            } else if (curr == game->players_tail) {
-                game->players_tail = prev;
-            } else {
-                prev->next = curr->next;
+    Player found_p = find_player(game, name);
+    if (found_p != NULL) {
+        fprintf(stderr, "removing player %s\n", name );
+        game->num_registered_players--;
+
+        Player curr = game->players_head;
+        Player prev = curr;
+        while (curr != NULL) {
+            if (strcmp(curr->name, name) == 0) {
+                if (curr == game->players_head) {
+                    game->players_head = curr->next;
+                } else if (curr == game->players_tail) {
+                    game->players_tail = prev;
+                } else {
+                    prev->next = curr->next;
+                }
+                free(curr);
+                break;
             }
-            free(curr);
-            break;
+            prev = curr;
+            curr = curr->next;
         }
-        prev = curr;
-        curr = curr->next;
     }
-    game->num_registered_players--;
 }
 
 void print_players(Game game)
@@ -133,4 +143,25 @@ void clear_all_players(Game game)
         free(curr);
         curr = curr->next;
     }
+}
+
+void print_move_direction(Direction d)
+{
+    char direction[15] = {0};
+
+    switch(d) {
+        case UP:
+            strcpy(direction, "UP");
+            break;
+        case RIGHT:
+            strcpy(direction, "RIGHT");
+            break;
+        case DOWN:
+            strcpy(direction, "DOWN");
+            break;
+        case LEFT:
+            strcpy(direction, "LEFT");
+            break;
+    }
+    fprintf(stderr, "Direction: %s\n", direction);
 }
