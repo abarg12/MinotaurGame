@@ -63,6 +63,7 @@ typedef struct Game {
     Player      active_p_head; // first active player, p3
     fd_set      *active_fd_set, *read_fd_set;
     char        *map;
+    char        *update_to_send; // for current map to send, sam to free it
     int         round;
     struct timespec *start_time;
     struct timeval *timeout;

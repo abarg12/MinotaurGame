@@ -71,7 +71,8 @@ int main (int argc, char **argv)
             
             case UPDATE: {
                 game->server_state = SEND;
-                // char *message_to_send = update(game);
+                char *updated_data = update(game);
+                // make_message
                 break;
             }
             
@@ -100,11 +101,6 @@ int main (int argc, char **argv)
                             game->game_state   = WAITING;
                             game->server_state = RECEIVE;
                         
-                        // todo change players' statuses/select new players 
-                        // currently, same players play again
-                        // IDEA: 
-                        //   update the active_p_head pointer to player + 2
-                        //   reuse the start_game function 
                         } else {
                             update_players(game);
                             start_game(game);
@@ -118,7 +114,7 @@ int main (int argc, char **argv)
             }
         }
         i++;
-        fprintf(stderr, "i %d\n", i);
+        fprintf(stderr, "i: %d\n", i);
     }
 }
 
@@ -162,16 +158,27 @@ void send_start_notification(Game game)
     memcpy(msg->data, "map1", 32); // todo review how to encode map version
     
     // minotaur is first one in group of n active players
-    memcpy(msg->data + 32, game->active_p_head, 20);
+    memcpy(msg->data + 32, game->active_p_head, PLAYER_NAME_LEN);
+    fprintf(stderr, "minotaur: %s\n", game->active_p_head);
 
     send_to_all(game, (char*)msg, sizeof(msg));
     
     free(msg);
 }
 
+// # Players <char> (1 byte)
+// Player 1 name <char*> (20 bytes)
+// Player 1 score <int> (4 bytes)
+// ...
 void send_end_game_notifcation(Game game)
 {
-    char msg [] = "end game notification";
+    Message msg = malloc(sizeof(*msg));
+    assert (msg != NULL);
+    msg->type = 6;
+    
+    bzero(msg->id, PLAYER_NAME_LEN);
+    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
+
     send_to_all(game, msg, sizeof(msg));
 }
 
@@ -179,6 +186,7 @@ void send_end_game_notifcation(Game game)
 void send_map(Game game)
 {
     char msg[] = "updated map";
+    // create a Message struct and memcpy the data part stored in game->updated_data
 
     // 4  = sequence num (int)
     // 1  = num players (char)
@@ -295,7 +303,6 @@ void print_game_state(Game game)
 // determines if the game can start based on the number of registered players
 // and changes the game state to "IN_PLAY" if so
 // and changes the state of two players to "PLAYING"
-// todo to loop back, check if one of the active_p_head == NULL or if == tail
 void start_game(Game game) 
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
