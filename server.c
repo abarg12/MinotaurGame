@@ -2,6 +2,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 #include "server.h"
 #include "game_logic.h"
 
@@ -14,11 +15,12 @@ int main (int argc, char **argv)
 	struct hostent *hostp; /* client host info */
 	struct timeval *t = NULL;
 
-	if (argc != 1) {
-		fprintf(stderr, "usage: %s\n", argv[0]);
+	if (argc != 2) {
+		fprintf(stderr, "usage: %s <round time>\n", argv[0]);
 		exit(1);
 	}
 	portno = 9040;
+    ROUND_TIME = atoi(argv[1]);
 
 	/* socket: create the parent socket */
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -34,7 +36,6 @@ int main (int argc, char **argv)
 	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serveraddr.sin_port = htons((unsigned short)portno);
 
-	/* bind: associate the parent socket with a port */
 	if (bind(sockfd, (struct sockaddr *) &serveraddr, sizeof(serveraddr)) < 0) 
 		fprintf(stderr, "ERROR on binding");
 
@@ -42,60 +43,146 @@ int main (int argc, char **argv)
     assert (game != NULL);
 
     initialize_game(game, sockfd);
-
-    while(1) {
+    // int i= 0;
+    // while(i < 25) {
+    while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
+        print_game_state(game);
 
         switch(game->server_state) {
             case RECEIVE: {
+                if(game->game_state == IN_PLAY && is_round_over(game)) {
+                    fprintf(stderr, "round is over! \n");
+                    game->game_state   = END_OF_GAME;
+                    game->server_state = SEND;
+                    break;
+                }
+
                 bool timed_out = receive_data(game);
 
-                if (game->game_state == IN_PLAY && timed_out) {
+                if (game->game_state == LAUNCH) {
+                    game->server_state = SEND;
+
+                } else if (game->game_state == IN_PLAY && timed_out) {
                     game->server_state = UPDATE;
                 }
                 break;
             }
             
             case UPDATE: {
-                fprintf(stderr, "Update state\n");
-                send_map(game);
-                return 0;
+                // print_game_state(game);
+                // fprintf(stderr, "Update state\n");
+                game->server_state = SEND;
                 // char *message_to_send = update(game);
-                // game->game_state == SEND;
                 break;
             }
             
             case SEND: {
-                send_map(game);
+                // print_game_state(game);
+                switch(game->game_state) {
+                    case LAUNCH:
+                        fprintf(stderr, "send start notification \n");
+                        send_start_notification(game);
+                        set_start_time(game);
+                        game->game_state   = IN_PLAY;
+                        game->server_state = RECEIVE;
+                        break;
+
+                    case IN_PLAY:
+                        // fprintf(stderr, "send map\n");
+                        send_map(game);
+                        game->server_state = RECEIVE;
+                        break;
+
+                    case END_OF_GAME:
+                        fprintf(stderr, "end of game %d\n", game->round);
+                        game->round++;
+                        send_end_game_notifcation(game);
+                        
+                        // next round setup
+                        if (game->num_registered_players < MAX_ACTIVE_PLAYERS) {
+                            game->game_state   = WAITING;
+                            game->server_state = RECEIVE;
+                        
+                        // todo change players' statuses/select new players 
+                        // currently, same players play again
+                        // IDEA: reuse the start_game function, first update the active_p_head pointer
+                        } else {
+                            game->game_state   = LAUNCH;
+                            game->server_state = SEND;
+                        }
+                        
+                        set_start_time(game); // todo: feels hacky...
+                        break;
+                }
                 break;
             }
         }
+        // i++;
+        // fprintf(stderr, "i %d\n", i);
     }
 }
 
-// sends the updated coordinates to all the registered clients
+// returns true if the current game round is over, i.e. n seconds elapsed.
+// returns false otherwise.
+bool is_round_over(Game game)
+{   
+    return (get_current_time() - time_in_billion(game)) / BILLION >= ROUND_TIME;
+}
+
+void send_start_notification(Game game)
+{
+    Message msg = malloc(sizeof(*msg));
+    assert(msg != NULL);
+    
+    msg->type = 5;
+
+    bzero(msg->id, PLAYER_NAME_LEN);
+    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
+
+    bzero(msg->data, MAX_DATA_LEN);
+    memcpy(msg->data, "map1", 32); // todo review how to encode map version
+    
+    // minotaur is first one in group of n active players
+    memcpy(msg->data + 32, game->active_p_head, 20);
+
+    send_to_all(game, (char*)msg, sizeof(msg));
+    
+    free(msg);
+}
+
+void send_end_game_notifcation(Game game)
+{
+    char msg [] = "end game notification";
+    send_to_all(game, msg, sizeof(msg));
+}
+
+// sends the updated coordinates to all the registered players
 void send_map(Game game)
 {
-    // placeholder
-    char msg[] = "This a message from the server baby!!";
+    char msg[] = "updated map";
 
     // 4  = sequence num (int)
     // 1  = num players (char)
     // 22 = player name (20 chars) + x, y coordinates (1 char)
     int msg_size = 4 + 1 + game->num_registered_players * 22;
+    
+    send_to_all(game, msg, msg_size);
+    
+}
 
+// helper function to send a message to all registered players
+void send_to_all(Game game, char *msg, int size) 
+{
     Player curr = game->players_head;
-    while (curr != NULL) {
-        if (curr->player_addr == NULL)
-        {
-            fprintf(stderr, "player address is NULL\n");
-        }
-                
-        int bytes = sendto(game->sockfd, msg, sizeof(msg), 0, 
-                (struct sockaddr *) curr->player_addr, curr->addr_len);
+
+    while (curr != NULL) {   
+        int bytes = sendto(game->sockfd, msg, size, 0, 
+                           (struct sockaddr *) curr->player_addr, 
+                           curr->addr_len);
 
         if (bytes < 0)
-            fprintf(stderr, "***ERROR in sendto: %d\n", bytes);
+            fprintf(stderr, "ERROR in sendto: %d\n", bytes);
 
         curr = curr->next;
     }
@@ -124,9 +211,8 @@ bool receive_data(Game game)
     *clientlen = sizeof(*clientaddr);
     assert(clientlen != NULL);
 
-    /* Block until input arrives on an active socket or if timeout expires. */
-	if (select (FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) < 
-        0) {
+	if (select (FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) 
+        < 0) {
 		fprintf(stderr, "error in Select\n");
 	}
 
@@ -141,8 +227,6 @@ bool receive_data(Game game)
 
 	if (n < 0)
 		fprintf(stderr, "ERROR in recvfrom\n");
-
-    fprintf(stderr, "client address: %s, %d\n", inet_ntoa (clientaddr->sin_addr), ntohs (clientaddr->sin_port));
     
     switch (buf[0]) {
         case REGISTER: {
@@ -150,7 +234,6 @@ bool receive_data(Game game)
                            clientlen);
             start_game(game);
             print_players(game);
-            print_game_state(game);
             break;
         }
 
@@ -181,6 +264,14 @@ void print_game_state(Game game)
         case END_OF_GAME:
             strcpy(game_state, "END_OF_GAME");
             break;
+        case LAUNCH:
+            strcpy(game_state, "LAUNCH");
+            break;
+        
+        default:
+            strcpy(game_state, "ERROR");
+            break;
+
     }
     fprintf(stderr, "Game State: %s\n", game_state);
 }
@@ -199,7 +290,7 @@ void start_game(Game game)
              curr = curr->next;
              i++;
         }
-        game->game_state = IN_PLAY;
+        game->game_state = LAUNCH;
     }
 }
 
@@ -209,6 +300,12 @@ void initialize_game(Game game, int sockfd)
     // map
     game->map = NULL;
 
+    // game rounds
+    game->round = 0;
+    game->start_time = malloc(sizeof *game->start_time);
+    assert(game->start_time != NULL);
+    set_start_time(game);
+    
     // players
     game->players_head  = NULL;
     game->players_tail  = NULL;
@@ -235,11 +332,26 @@ void initialize_game(Game game, int sockfd)
     game->timeout->tv_usec = 0;
 }
 
+// set a round's start time to the current clock time.
+void set_start_time(Game game)
+{
+    clock_gettime(CLOCK_REALTIME, game->start_time);
+}
 
+// converts the time to billions for easy comparisons.
+int64_t time_in_billion(Game game)
+{
+    return BILLION * game->start_time->tv_sec + game->start_time->tv_nsec;
+}
 
+// returns the current time in billions
+int64_t get_current_time()
+{
+    struct timespec t;
+    clock_gettime(CLOCK_REALTIME, &t);
 
-
-
+    return BILLION * t.tv_sec + t.tv_nsec;
+}
 
 
 

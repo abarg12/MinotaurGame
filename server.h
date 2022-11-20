@@ -10,6 +10,10 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <time.h>
+#include <inttypes.h>
+
+
 #include "player.h"
 #include "game_logic.h"
 
@@ -21,8 +25,13 @@
 #define MOVE_INSTR_INDEX 25
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
+#define MAX_DATA_LEN 512
 
 typedef struct Player *Player;
+#define PLAYER_NAME_LEN 20
+#define BILLION 1000000000L
+
+int ROUND_TIME; //20 // todo change: n seconds
 
 typedef enum MessageType {
     REGISTER = 0,
@@ -33,11 +42,12 @@ typedef enum MessageType {
 typedef enum ServerState {
     RECEIVE,
     UPDATE,
-    SEND, 
+    SEND,
 } ServerState;
 
 typedef enum GameState {
     WAITING,
+    LAUNCH,
     IN_PLAY,
     END_OF_GAME,
 } GameState;
@@ -53,8 +63,17 @@ typedef struct Game {
     Player      active_p_head; // first active player, p3
     fd_set      *active_fd_set, *read_fd_set;
     char        *map;
+    int         round;
+    struct timespec *start_time;
     struct timeval *timeout;
 } *Game;
+
+// defines a message the server sends clients over UDP
+typedef struct __attribute__((__packed__)) Message {
+    char type;
+    char id[PLAYER_NAME_LEN];
+    char data[MAX_DATA_LEN];
+} *Message;
 
 // yet another linked list of frames returned by game logic module
 // frames need to be assigned a sequence number
@@ -69,6 +88,15 @@ void initialize_game(Game game, int sockfd);
 bool receive_data(Game game);
 void print_game_state(Game game);
 void reset_timeout(Game game);
+void set_start_time(Game game);
+int64_t get_current_time();
+int64_t time_in_billion(Game game);
+bool is_round_over(Game game);
+
+// send messages to clients:
+void send_to_all(Game game, char *msg, int size);
 void send_map(Game game);
+void send_start_notification(Game game);
+void send_end_game_notifcation(Game game);
 
 #endif
