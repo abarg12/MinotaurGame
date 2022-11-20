@@ -71,7 +71,7 @@ int main (int argc, char **argv)
             
             case UPDATE: {
                 game->server_state = SEND;
-                char *updated_data = update(game);
+                // char *updated_data = update(game);
                 // make_message
                 break;
             }
@@ -152,15 +152,26 @@ void send_start_notification(Game game)
     msg->type = 5;
 
     bzero(msg->id, PLAYER_NAME_LEN);
-    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
+    strcpy(msg->id, "Server");
 
     bzero(msg->data, MAX_DATA_LEN);
-    memcpy(msg->data, "map1", 32); // todo review how to encode map version
+    strcpy(msg->data, "map1");
     
     // minotaur is first one in group of n active players
-    memcpy(msg->data + 32, game->active_p_head, PLAYER_NAME_LEN);
-    fprintf(stderr, "minotaur: %s\n", game->active_p_head);
+    strcpy(msg->data + 32, game->active_p_head->name);
+    fprintf(stderr, "minotaur: %s\n", msg->data + 32);
 
+    int i;
+    for (i = 0; i < 20; i++) {
+        fprintf(stderr, "%c", msg->id[i]);
+    }   
+    
+    fprintf(stderr, "\n* * * * * *\n");
+
+    for (i = 0; i < 52; i++) {
+        fprintf(stderr, "%c", msg->data[i]);
+    }
+    fprintf(stderr, "\n* * * \n");
     send_to_all(game, (char*)msg, sizeof(msg));
     
     free(msg);
@@ -170,6 +181,7 @@ void send_start_notification(Game game)
 // Player 1 name <char*> (20 bytes)
 // Player 1 score <int> (4 bytes)
 // ...
+// while loop that memcpy's 3 things at once i times, advances pointer in array by 24 bytes
 void send_end_game_notifcation(Game game)
 {
     Message msg = malloc(sizeof(*msg));
@@ -179,7 +191,7 @@ void send_end_game_notifcation(Game game)
     bzero(msg->id, PLAYER_NAME_LEN);
     memcpy(msg->id, "Server", PLAYER_NAME_LEN);
 
-    send_to_all(game, msg, sizeof(msg));
+    send_to_all(game, (char*) msg, sizeof(msg));
 }
 
 // sends the updated coordinates to all the registered players
@@ -188,18 +200,27 @@ void send_map(Game game)
     char msg[] = "updated map";
     // create a Message struct and memcpy the data part stored in game->updated_data
 
+    //TODO include correct message size
     // 4  = sequence num (int)
     // 1  = num players (char)
     // 22 = player name (20 chars) + x, y coordinates (1 char)
     int msg_size = 4 + 1 + game->num_registered_players * 22;
     
-    send_to_all(game, msg, msg_size);
+    send_to_all(game, msg, 11);
     
 }
 
 // helper function to send a message to all registered players
 void send_to_all(Game game, char *msg, int size) 
 {
+    fprintf(stderr, "MESSAGE\n");
+    int i;
+    for (i = 0; i < size; i++) {
+        fprintf(stderr, "%c", msg[i]);
+
+    }
+    fprintf(stderr, "\nend of message\n");
+
     Player curr = game->players_head;
 
     while (curr != NULL) {   
