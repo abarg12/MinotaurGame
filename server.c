@@ -172,7 +172,7 @@ void send_start_notification(Game game)
         fprintf(stderr, "%c", msg->data[i]);
     }
     fprintf(stderr, "\n* * * \n");
-    send_to_all(game, (char*)msg, sizeof(msg));
+    send_to_all(game, (char*)msg, sizeof(*msg));
     
     free(msg);
 }
