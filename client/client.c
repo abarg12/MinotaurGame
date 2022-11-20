@@ -13,8 +13,11 @@
 #include "client.h"
 
 #define BUFSIZE 533
-#define GHEIGHT 28
-#define GWIDTH  96
+#define GHEIGHT 14
+#define GWIDTH 44
+
+//#define GHEIGHT 28
+//#define GWIDTH  96
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
@@ -25,6 +28,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
+void print_buffer(char *buf);
 
 char *map;
 int move_seq;
@@ -154,7 +158,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 else {
                     // TODO: map data received, print it out
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-                    fprintf(stderr, "buf %s\n", buf);
+                    print_buffer(buf);
                 }
             }
         } 
@@ -342,8 +346,8 @@ void draw_map(WINDOW *game_window) {
 
     int x, y;
     char val;
-    int minotaurx = 45;
-    int minotaury = 13;
+    int minotaurx = GWIDTH / 4;
+    int minotaury = GHEIGHT / 4;
     for (y = 0; y < GHEIGHT; y++) {
         wmove(game_window, y, 0);
         for (x = 0; x < GWIDTH; x++) {
@@ -363,4 +367,25 @@ void draw_map(WINDOW *game_window) {
     }
     wrefresh(game_window);
 }
+
+
+void print_buffer(char *buf) {
+    int i;
+    move(0,0);
+    clrtoeol();
+
+
+    for (i = 0; i < 73; i++) {
+        char val = buf[i];
+        if (val != '\0') {
+            addch(val);
+        }
+    }
+    refresh();
+}
+
+
+
+
+
 
