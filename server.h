@@ -98,5 +98,6 @@ void send_to_all(Game game, char *msg, int size);
 void send_map(Game game);
 void send_start_notification(Game game);
 void send_end_game_notifcation(Game game);
+void update_players(Game game);
 
 #endif

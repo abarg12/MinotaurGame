@@ -43,9 +43,9 @@ int main (int argc, char **argv)
     assert (game != NULL);
 
     initialize_game(game, sockfd);
-    // int i= 0;
-    // while(i < 25) {
-    while (1) {
+    int i= 0;
+    while(i < 40) {
+    // while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
         print_game_state(game);
 
@@ -70,15 +70,12 @@ int main (int argc, char **argv)
             }
             
             case UPDATE: {
-                // print_game_state(game);
-                // fprintf(stderr, "Update state\n");
                 game->server_state = SEND;
                 // char *message_to_send = update(game);
                 break;
             }
             
             case SEND: {
-                // print_game_state(game);
                 switch(game->game_state) {
                     case LAUNCH:
                         fprintf(stderr, "send start notification \n");
@@ -89,7 +86,6 @@ int main (int argc, char **argv)
                         break;
 
                     case IN_PLAY:
-                        // fprintf(stderr, "send map\n");
                         send_map(game);
                         game->server_state = RECEIVE;
                         break;
@@ -106,9 +102,12 @@ int main (int argc, char **argv)
                         
                         // todo change players' statuses/select new players 
                         // currently, same players play again
-                        // IDEA: reuse the start_game function, first update the active_p_head pointer
+                        // IDEA: 
+                        //   update the active_p_head pointer to player + 2
+                        //   reuse the start_game function 
                         } else {
-                            game->game_state   = LAUNCH;
+                            update_players(game);
+                            start_game(game);
                             game->server_state = SEND;
                         }
                         
@@ -118,9 +117,28 @@ int main (int argc, char **argv)
                 break;
             }
         }
-        // i++;
-        // fprintf(stderr, "i %d\n", i);
+        i++;
+        fprintf(stderr, "i %d\n", i);
     }
+}
+
+void update_players(Game game)
+{
+    Player curr = game->active_p_head;
+    int i = 0;
+    while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
+        curr->player_state = SPECTATING;
+        fprintf(stderr, "spectating: %s\n", curr->name);
+        curr = curr->next;
+        i++;
+
+        if (curr == NULL) {
+            curr = game->players_head;
+        }
+    }
+    game->active_p_head = curr;
+    fprintf(stderr, "active_p_head: %s\n", game->active_p_head->name);
+
 }
 
 // returns true if the current game round is over, i.e. n seconds elapsed.
@@ -211,8 +229,8 @@ bool receive_data(Game game)
     *clientlen = sizeof(*clientaddr);
     assert(clientlen != NULL);
 
-	if (select (FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) 
-        < 0) {
+	if (select(FD_SETSIZE, game->active_fd_set, NULL, NULL, game->timeout) < 0) 
+    {
 		fprintf(stderr, "error in Select\n");
 	}
 
@@ -236,13 +254,11 @@ bool receive_data(Game game)
             print_players(game);
             break;
         }
-
         case EXIT: {
             remove_player(game, buf + PLAYER_NAME_INDEX);
             print_players(game);
             break;
         }
-
         case MOVE: {
             register_move(game, buf);
             break;
@@ -287,10 +303,18 @@ void start_game(Game game)
         int i = 0;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
+             fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;
+
+             if (curr == NULL) {
+                curr = game->players_head;
+             }
         }
-        game->game_state = LAUNCH;
+        
+        if (game->game_state != IN_PLAY) {
+            game->game_state = LAUNCH;
+        }
     }
 }
 
