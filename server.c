@@ -44,8 +44,8 @@ int main (int argc, char **argv)
 
     initialize_game(game, sockfd);
     int i= 0;
-    while(i < 40) {
-    // while (1) {
+    //while(i < 40) {
+    while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
         print_game_state(game);
 
@@ -174,7 +174,7 @@ void send_start_notification(Game game)
     fprintf(stderr, "\n* * * \n");
     send_to_all(game, (char*)msg, sizeof(*msg));
     
-    free(msg);
+    //free(msg);
 }
 
 // # Players <char> (1 byte)
@@ -197,17 +197,22 @@ void send_end_game_notifcation(Game game)
 // sends the updated coordinates to all the registered players
 void send_map(Game game)
 {
-    char msg[] = "updated map";
     // create a Message struct and memcpy the data part stored in game->updated_data
+    update(game);
 
     //TODO include correct message size
     // 4  = sequence num (int)
     // 1  = num players (char)
     // 22 = player name (20 chars) + x, y coordinates (1 char)
-    int msg_size = 4 + 1 + game->num_active_players * 22;
+    int msg_size = 1 + 4 + 1 + game->num_active_players * 22;
+    fprintf(stderr, "msg_size: %d", msg_size);
     
-    send_to_all(game, msg, 11);
+    char msg[msg_size + 1];
+    msg[0] = 3;
+    memcpy(msg + 1, game->update_to_send, msg_size);
     
+    send_to_all(game, msg, msg_size + 1);
+    //free(game->updated_to_send); 
 }
 
 // helper function to send a message to all registered players
@@ -331,6 +336,7 @@ void start_game(Game game)
         int i = 0;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
+             game->num_active_players = game->num_active_players + 1;
              fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;

@@ -40,7 +40,8 @@ void load_map(char *file_name, Game g) {
 // into the "char *update_to_send" field
 // will be freed by server code
 void update(Game g) {
-    int msg_size = 4 + 1 + g->num_active_players * 22;
+    fprintf(stderr, "Number of active players: %d\n", 2);
+    int msg_size = 4 + 1 + 2 * 22;
     char *msg = malloc(msg_size);
     bzero(msg, msg_size);
 
@@ -49,13 +50,13 @@ void update(Game g) {
     seq_no = htonl(seq_no);
     memcpy(msg, &seq_no, 4);
 
-    msg[4] = g->num_active_players; 
+    msg[4] = 2; 
     int buf_pos = 5;
 
 
     // get what the coordinates would be assuming no player collisions
-    PlayerPhysics old_coords[g->num_active_players];
-    PlayerPhysics new_coords[g->num_active_players]; 
+    PlayerPhysics old_coords[2];
+    PlayerPhysics new_coords[2]; 
 
     get_curr_coords(g, old_coords);
     // update coords and take walls into consideration
@@ -86,6 +87,8 @@ void update(Game g) {
         player_number = player_number + 1;
         curr_player = curr_player->next;
     }
+
+    g->update_to_send = msg;
 }
 
 
@@ -106,7 +109,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     int i, x, y;
-    for (i = 0; i < g->num_active_players; i++) {
+    for (i = 0; i < 2; i++) {
         if (old_coords[i].d == UP) {
            x = old_coords[i].x;
            y = old_coords[i].y + 1;  
