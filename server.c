@@ -191,7 +191,7 @@ void send_end_game_notifcation(Game game)
     bzero(msg->id, PLAYER_NAME_LEN);
     memcpy(msg->id, "Server", PLAYER_NAME_LEN);
 
-    send_to_all(game, (char*) msg, sizeof(msg));
+    send_to_all(game, (char*) msg, sizeof(*msg));
 }
 
 // sends the updated coordinates to all the registered players
