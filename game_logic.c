@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include <assert.h>
 
 #include "server.h"
 #include "game_logic.h"
@@ -42,6 +43,7 @@ void load_map(char *file_name, Game g) {
 void update(Game g) {
     int msg_size = 4 + 1 + (g->num_active_players * 22);
     char *msg = malloc(msg_size);
+    assert(msg != NULL);
     bzero(msg, msg_size);
 
     // this is arbitrarily set for now; TODO: change seq_no to be good
@@ -66,7 +68,6 @@ void update(Game g) {
     Player curr_player = g->players_head;
     while (curr_player != NULL) {
         if (curr_player->player_state != PLAYING) {
-            player_number = player_number + 1;
             curr_player = curr_player->next;
             continue;     
         }
@@ -75,6 +76,7 @@ void update(Game g) {
 
         curr_player->phys.x = new_coords[player_number].x;
         curr_player->phys.y = new_coords[player_number].y;
+        curr_player->phys.d = new_coords[player_number].d;
 
         memcpy(msg + buf_pos, curr_player->name, PLAYER_NAME_LEN);
         buf_pos = buf_pos + PLAYER_NAME_LEN;
@@ -101,6 +103,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
         }
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
+        old_coords[n].d = p->phys.d;
 
         p = p->next;
     }

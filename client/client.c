@@ -437,11 +437,11 @@ void update_map(char *buf, WINDOW *game_window) {
     char val;
         
     //TODO: parse buffer intelligently
-    int minotaurx = buf[26];
-    int minotaury = buf[27];
+    int minotaurx = buf[46];
+    int minotaury = buf[47];
 
-    int humanx = buf[48];
-    int humany = buf[49];
+    int humanx = buf[68];
+    int humany = buf[69];
 
 
     wmove(game_window, minotaury, minotaurx);
