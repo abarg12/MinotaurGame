@@ -70,9 +70,8 @@ int main (int argc, char **argv)
             }
             
             case UPDATE: {
+                update(game);
                 game->server_state = SEND;
-                // char *updated_data = update(game);
-                // make_message
                 break;
             }
             
