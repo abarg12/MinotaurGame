@@ -46,6 +46,7 @@ void update(Game g) {
     assert(msg != NULL);
     bzero(msg, msg_size);
 
+/*
     // this is arbitrarily set for now; TODO: change seq_no to be good
     int seq_no = 5;
     seq_no = htonl(seq_no);
@@ -89,6 +90,7 @@ void update(Game g) {
         curr_player = curr_player->next;
     }
 
+*/
     g->update_to_send = msg;
 }
 
