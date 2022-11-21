@@ -40,7 +40,7 @@ void load_map(char *file_name, Game g) {
 // into the "char *update_to_send" field
 // will be freed by server code
 void update(Game g) {
-    int msg_size = 4 + 1 + g->num_active_players * 22;
+    int msg_size = 4 + 1 + (g->num_active_players * 22);
     char *msg = malloc(msg_size);
     bzero(msg, msg_size);
 
@@ -86,6 +86,8 @@ void update(Game g) {
         player_number = player_number + 1;
         curr_player = curr_player->next;
     }
+
+    g->update_to_send = msg;
 }
 
 
