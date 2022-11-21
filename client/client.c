@@ -461,17 +461,28 @@ void update_map(char *buf, WINDOW *game_window) {
 void  parse_start_info(char *buf, char *player_name) {
     int i, offset, player_name_size;
     char curr_name[20];
-    int num_active_players = buf[32];
+    int num_active_players = buf[53];
 
+    /*
+    int j;
+    for (j = 0; j < 533; j++) {
+        if (buf[j] == '\0') {
+            fprintf(stderr, "0");
+        }
+        else {
+            fprintf(stderr, "%c", buf[j]);
+        }
+    }*/
 
     role = SPECTATOR;
 
     player_name_size = 20;
     
     for (i = 0; i < num_active_players; i++) {
-        offset = 33 + (player_name_size * i);
+        offset = 54 + (player_name_size * i);
         memcpy(curr_name, buf + offset, 20); 
         if (strcmp(curr_name, player_name) == 0) {
+            printw(curr_name);
             if (i == 0) {
                 role = MINOTAUR;    
             } else {
@@ -479,6 +490,7 @@ void  parse_start_info(char *buf, char *player_name) {
             }
         }
     }
+    refresh();
 }
 
 
