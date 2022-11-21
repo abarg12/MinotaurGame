@@ -437,7 +437,7 @@ void update_map(char *buf, WINDOW *game_window) {
     char val;
         
     //TODO: parse buffer intelligently
-    int minotaurx = buf[46];
+    /*int minotaurx = buf[46];
     int minotaury = buf[47];
 
     int humanx = buf[68];
@@ -455,6 +455,7 @@ void update_map(char *buf, WINDOW *game_window) {
     wattroff(game_window, COLOR_PAIR(3));
 
     wrefresh(game_window);
+    */
 }
 
 
