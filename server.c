@@ -217,6 +217,11 @@ void send_map(Game game)
 
     bzero(msg->data, MAX_DATA_LEN);
     int msg_size = 4 + 1 + game->num_active_players * 22;
+
+    if (game->update_to_send == NULL) {
+        fprintf(stderr, "update to send is NULL\n");
+        exit(1);
+    }
     memcpy(msg->data, game->update_to_send, msg_size);
 
     send_to_all(game, (char*) msg, msg_size);
@@ -374,6 +379,7 @@ void initialize_game(Game game, int sockfd)
 {
     // map
     game->map = NULL;
+    game->update_to_send = NULL;
 
     // game rounds
     game->round = 0;
