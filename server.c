@@ -208,18 +208,18 @@ void send_end_game_notifcation(Game game)
 // sends the updated coordinates to all the registered players
 void send_map(Game game)
 {
-    char msg[] = "updated map";
-    // create a Message struct and memcpy the data part stored in game->updated_data
+    Message msg = malloc(sizeof(*msg));
+    assert (msg != NULL);
+    msg->type = 3;
+    
+    bzero(msg->id, PLAYER_NAME_LEN);
+    strcpy(msg->id, "Server");
 
-    //TODO include correct message size
-    // 4  = sequence num (int)
-    // 1  = num players (char)
-    // 22 = player name (20 chars) + x, y coordinates (1 char)
+    bzero(msg->data, MAX_DATA_LEN);
     int msg_size = 4 + 1 + game->num_active_players * 22;
-    // todo update the active players field
-    
-    send_to_all(game, msg, 11);
-    
+    memcpy(msg->data, game->update_to_send, msg_size);
+
+    send_to_all(game, (char*) msg, msg_size);
 }
 
 // helper function to send a message to all registered players
@@ -343,6 +343,16 @@ void start_game(Game game)
         int i = 0;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
+             if (i == 0) {
+                curr->phys.x = MWIDTH/2;
+                curr->phys.y = MHEIGHT/2;
+                curr->phys.d = DOWN;
+             } else {
+                curr->phys.x = MWIDTH/4;
+                curr->phys.y = MHEIGHT/4;
+                curr->phys.d = UP;
+
+             }
              game->num_active_players++;
              fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
