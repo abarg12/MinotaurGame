@@ -124,6 +124,7 @@ void update_players(Game game)
     int i = 0;
     while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
+        game->num_active_players--;
         fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
         i++;
@@ -133,8 +134,6 @@ void update_players(Game game)
         }
     }
     game->active_p_head = curr;
-    fprintf(stderr, "active_p_head: %s\n", game->active_p_head->name);
-
 }
 
 // returns true if the current game round is over, i.e. n seconds elapsed.
@@ -144,6 +143,11 @@ bool is_round_over(Game game)
     return (get_current_time() - time_in_billion(game)) / BILLION >= ROUND_TIME;
 }
 
+// includes
+// Map name                 <char *> (32 bytes)
+// Number of active players <char>   (1 byte)
+// Player1 (Minotaur) name  <char *> (20 bytes)
+// Player2 name             <char *> (20 bytes)
 void send_start_notification(Game game)
 {
     Message msg = malloc(sizeof(*msg));
@@ -157,21 +161,28 @@ void send_start_notification(Game game)
     bzero(msg->data, MAX_DATA_LEN);
     strcpy(msg->data, "map1");
     
-    // minotaur is first one in group of n active players
-    strcpy(msg->data + 32, game->active_p_head->name);
-    fprintf(stderr, "minotaur: %s\n", msg->data + 32);
+    msg->data[MAP_NAME_LEN] = game->num_active_players;
+    fprintf(stderr, "num active players: %d\n",  msg->data[MAP_NAME_LEN]);
 
+    // add all the active players 
     int i;
-    for (i = 0; i < 20; i++) {
-        fprintf(stderr, "%c", msg->id[i]);
-    }   
-    
-    fprintf(stderr, "\n* * * * * *\n");
-
-    for (i = 0; i < 52; i++) {
-        fprintf(stderr, "%c", msg->data[i]);
+    char *j = msg->data + MAP_NAME_LEN + 1; // +1 to go past num players
+    Player p = game->players_head;
+    while (p != NULL) {
+        if (p->player_state == PLAYING) {
+            strcpy(j, p->name);
+            j += PLAYER_NAME_LEN;
+        }
+        p = p->next;
     }
-    fprintf(stderr, "\n* * * \n");
+  
+    // fprintf(stderr, "* * * * * *\n");
+
+    // for (i = MAP_NAME_LEN + 1; i < 512; i++) {
+    //     fprintf(stderr, "%c", msg->data[i]);
+    // }
+    // fprintf(stderr, "\n* * * \n");
+
     send_to_all(game, (char*)msg, sizeof(*msg));
     
     free(msg);
@@ -205,6 +216,7 @@ void send_map(Game game)
     // 1  = num players (char)
     // 22 = player name (20 chars) + x, y coordinates (1 char)
     int msg_size = 4 + 1 + game->num_active_players * 22;
+    // todo update the active players field
     
     send_to_all(game, msg, 11);
     
@@ -213,13 +225,13 @@ void send_map(Game game)
 // helper function to send a message to all registered players
 void send_to_all(Game game, char *msg, int size) 
 {
-    fprintf(stderr, "MESSAGE\n");
-    int i;
-    for (i = 0; i < size; i++) {
-        fprintf(stderr, "%c", msg[i]);
+    // fprintf(stderr, "MESSAGE\n");
+    // int i;
+    // for (i = MAP_NAME_LEN + 1; i < size; i++) {
+    //     fprintf(stderr, "%c", msg[i]);
 
-    }
-    fprintf(stderr, "\nend of message\n");
+    // }
+    // fprintf(stderr, "\nend of message\n");
 
     Player curr = game->players_head;
 
@@ -331,6 +343,7 @@ void start_game(Game game)
         int i = 0;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
+             game->num_active_players++;
              fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;

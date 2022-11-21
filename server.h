@@ -26,6 +26,7 @@
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
 #define MAX_DATA_LEN 512
+#define MAP_NAME_LEN 32
 
 typedef struct Player *Player;
 #define PLAYER_NAME_LEN 20
