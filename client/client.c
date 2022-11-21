@@ -30,6 +30,7 @@ int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
 void print_buffer(char *buf);
+void  parse_start_info(char *buf, char *player_name);
 
 char *map;
 int move_seq;
@@ -144,6 +145,12 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         attron(COLOR_PAIR(3));
         printw("HUMAN");
         attroff(COLOR_PAIR(3));
+    } else if (role == MINOTAUR) {
+        attron(COLOR_PAIR(2));
+        printw("MINOTAUR"); 
+        attroff(COLOR_PAIR(2));
+    } else {
+        printw("SPECTATOR");
     }
     refresh();
 
@@ -340,10 +347,11 @@ void registration_rq(ServerData *sd, char *player_name) {
         //              might involve setting role as SPECTATOR
         fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
         exit(1);
+    } else {
+        // TODO: Figure out how to parse role from game start notification
+        parse_start_info(buf, player_name);
     }
     
-    // TODO: Figure out how to parse role from game start notification
-    role = HUMAN;
 
     return;
 }
@@ -448,4 +456,30 @@ void update_map(char *buf, WINDOW *game_window) {
 
     wrefresh(game_window);
 }
+
+
+void  parse_start_info(char *buf, char *player_name) {
+    int i, offset, player_name_size;
+    char curr_name[20];
+    int num_active_players = buf[32];
+
+
+    role = SPECTATOR;
+
+    player_name_size = 20;
+    
+    for (i = 0; i < num_active_players; i++) {
+        offset = 33 + (player_name_size * i);
+        memcpy(curr_name, buf + offset, 20); 
+        if (strcmp(curr_name, player_name) == 0) {
+            if (i == 0) {
+                role = MINOTAUR;    
+            } else {
+                role = HUMAN;
+            }
+        }
+    }
+}
+
+
 
