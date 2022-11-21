@@ -13,11 +13,11 @@
 #include "client.h"
 
 #define BUFSIZE 533
-#define GHEIGHT 14
-#define GWIDTH 44
+//#define GHEIGHT 14
+//#define GWIDTH 44
 
-//#define GHEIGHT 28
-//#define GWIDTH  96
+#define GHEIGHT 28
+#define GWIDTH  96
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
@@ -32,6 +32,7 @@ void print_buffer(char *buf);
 
 char *map;
 int move_seq;
+enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
 
 int main(int argc, char **argv) {
 /*    
@@ -88,6 +89,7 @@ int main(int argc, char **argv) {
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -130,6 +132,19 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     int n;
     move_seq = 0;
 
+    move(0,0);
+    clrtoeol();
+    printw("GAME IN PROGRESS");
+    
+    move(1,0);
+    clrtoeol();
+    printw("You are a ");
+    if (role == HUMAN) {
+        attron(COLOR_PAIR(3));
+        printw("HUMAN");
+        attroff(COLOR_PAIR(3));
+    }
+    refresh();
 
     int game_in_progress = 1;
     while (game_in_progress) {
@@ -316,6 +331,9 @@ void registration_rq(ServerData *sd, char *player_name) {
         fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
         exit(1);
     }
+    
+    // TODO: Figure out how to parse role from game start notification
+    role = HUMAN;
 
     return;
 }
@@ -346,8 +364,8 @@ void draw_map(WINDOW *game_window) {
 
     int x, y;
     char val;
-    int minotaurx = GWIDTH / 4;
-    int minotaury = GHEIGHT / 4;
+    int minotaurx = GWIDTH / 2;
+    int minotaury = GHEIGHT / 2;
     for (y = 0; y < GHEIGHT; y++) {
         wmove(game_window, y, 0);
         for (x = 0; x < GWIDTH; x++) {
@@ -373,14 +391,29 @@ void print_buffer(char *buf) {
     int i;
     move(0,0);
     clrtoeol();
+    
+    InstrStruct *msg_struct = malloc(533);
+    msg_struct = (InstrStruct *) buf;
 
 
+    //if (msg_struct->type == 3 || msg_struct->type == 5) {
+        printw("Msg type: %d", msg_struct->type);
+        printw("Name: %s", msg_struct->ID);
+        printw("Data: %s", msg_struct->DATA);
+    //} else {
+   
+/*
     for (i = 0; i < 73; i++) {
         char val = buf[i];
         if (val != '\0') {
             addch(val);
         }
     }
+    
+    }
+
+ */   
+
     refresh();
 }
 
