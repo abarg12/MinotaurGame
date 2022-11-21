@@ -373,7 +373,6 @@ void start_game(Game game)
     }
 }
 
-// todo: might need better logic for initializing players
 void initialize_game(Game game, int sockfd)
 {
     // map
@@ -410,6 +409,8 @@ void initialize_game(Game game, int sockfd)
     assert(game->timeout != NULL);
     game->timeout->tv_sec = 5;
     game->timeout->tv_usec = 0;
+
+    load_map("maps/map1", game);
 }
 
 // set a round's start time to the current clock time.

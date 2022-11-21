@@ -79,6 +79,7 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
     strncpy(new_p->name, name, PLAYER_NAME_LEN);
 
     new_p->score = 0;
+    new_p->last_move = -1;
 
     new_p->phys.x = START_X;
     new_p->phys.y = START_Y;
