@@ -204,7 +204,7 @@ void send_map(Game game)
     // 4  = sequence num (int)
     // 1  = num players (char)
     // 22 = player name (20 chars) + x, y coordinates (1 char)
-    int msg_size = 4 + 1 + game->num_registered_players * 22;
+    int msg_size = 4 + 1 + game->num_active_players * 22;
     
     send_to_all(game, msg, 11);
     

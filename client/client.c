@@ -13,17 +13,18 @@
 #include "client.h"
 
 #define BUFSIZE 533
-#define GHEIGHT 14
-#define GWIDTH 44
+//#define GHEIGHT 14
+//#define GWIDTH 44
 
-//#define GHEIGHT 28
-//#define GWIDTH  96
+#define GHEIGHT 28
+#define GWIDTH  96
 
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
 void download_map(char *map_name);
 void draw_map(WINDOW *game_window);
+void update_map(char *buf, WINDOW *game_window);
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
@@ -32,6 +33,7 @@ void print_buffer(char *buf);
 
 char *map;
 int move_seq;
+enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
 
 int main(int argc, char **argv) {
 /*    
@@ -88,6 +90,7 @@ int main(int argc, char **argv) {
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(3, COLOR_GREEN, COLOR_BLACK);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -130,6 +133,19 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     int n;
     move_seq = 0;
 
+    move(0,0);
+    clrtoeol();
+    printw("GAME IN PROGRESS");
+    
+    move(1,0);
+    clrtoeol();
+    printw("You are a ");
+    if (role == HUMAN) {
+        attron(COLOR_PAIR(3));
+        printw("HUMAN");
+        attroff(COLOR_PAIR(3));
+    }
+    refresh();
 
     int game_in_progress = 1;
     while (game_in_progress) {
@@ -137,7 +153,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         
         // The game select loop blocks until user input or map is received
         if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
-            fprintf(stderr, "ERRNO: %d, select error\n", errno);
+            // fprintf(stderr, "ERRNO: %d, select error\n", errno);
             if (errno == 4) {
                 continue;
             }
@@ -158,6 +174,13 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 else {
                     // TODO: map data received, print it out
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+                    move(2,0);
+                    clrtoeol();
+                    printw("The client received %d bytes of data including the header\n");
+                    refresh();
+                    if (buf[0] == 3) {
+                        update_map(buf, game_window);
+                    }
                     print_buffer(buf);
                 }
             }
@@ -308,14 +331,19 @@ void registration_rq(ServerData *sd, char *player_name) {
     }
 
     // TODO: connect to server to get start signal
-    buf[0] = 5;
-    //n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+    //buf[0] = 5;
+    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
 
     // Get game start notification
     if (buf[0] != 5) {
+        // TODO: handle the case when spectator is joining in the middle of a game
+        //              might involve setting role as SPECTATOR
         fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
         exit(1);
     }
+    
+    // TODO: Figure out how to parse role from game start notification
+    role = HUMAN;
 
     return;
 }
@@ -346,17 +374,11 @@ void draw_map(WINDOW *game_window) {
 
     int x, y;
     char val;
-    int minotaurx = GWIDTH / 4;
-    int minotaury = GHEIGHT / 4;
     for (y = 0; y < GHEIGHT; y++) {
         wmove(game_window, y, 0);
         for (x = 0; x < GWIDTH; x++) {
            val = map[x + (GWIDTH * y)];
-           if (x == minotaurx && y == minotaury) {
-               wattron(game_window, COLOR_PAIR(2));
-               waddch(game_window, 'M');
-               wattroff(game_window, COLOR_PAIR(2));
-           } else if (val == '1') {
+           if (val == '1') {
                wattron(game_window, COLOR_PAIR(1));
                waddch(game_window, '.');
                wattroff(game_window, COLOR_PAIR(1));
@@ -373,19 +395,57 @@ void print_buffer(char *buf) {
     int i;
     move(0,0);
     clrtoeol();
+    
+    InstrStruct *msg_struct = malloc(533);
+    msg_struct = (InstrStruct *) buf;
 
 
+    //if (msg_struct->type == 3 || msg_struct->type == 5) {
+        printw("Msg type: %d  ", msg_struct->type);
+        printw("Name: %s  ", msg_struct->ID);
+        printw("Data: %s  ", msg_struct->DATA);
+    //} else {
+   
+/*
     for (i = 0; i < 73; i++) {
         char val = buf[i];
         if (val != '\0') {
             addch(val);
         }
     }
+    
+    }
+
+ */   
+
     refresh();
 }
 
 
 
 
+void update_map(char *buf, WINDOW *game_window) {
+    int x, y;
+    char val;
+        
+    //TODO: parse buffer intelligently
+    int minotaurx = buf[26];
+    int minotaury = buf[27];
 
+    int humanx = buf[48];
+    int humany = buf[49];
+
+
+    wmove(game_window, minotaury, minotaurx);
+    wattron(game_window, COLOR_PAIR(2));
+    waddch(game_window, 'M');
+    wattroff(game_window, COLOR_PAIR(2));
+    
+    wmove(game_window, humany, humanx); 
+    wattron(game_window, COLOR_PAIR(3));
+    waddch(game_window, 'H');
+    wattroff(game_window, COLOR_PAIR(3));
+
+    wrefresh(game_window);
+}
 

@@ -29,10 +29,17 @@ typedef struct PlayerPhysics {
     Direction d; 
 } PlayerPhysics;
 
+typedef struct __attribute__((__packed__)) InstrStruct {
+    char type;
+    char ID[20];
+    char DATA[512];
+} InstrStruct;
+
+
 // Load the map from a file into the map array 
 void load_map(char *file_name, Game g);
 
-// Message 3 from the spec returned
-char *update(Game g);
+// data for Message 3 from the spec gets written into the game struct 
+void update(Game g);
 
 #endif
