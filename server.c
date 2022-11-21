@@ -44,8 +44,8 @@ int main (int argc, char **argv)
 
     initialize_game(game, sockfd);
     int i= 0;
-    while(i < 40) {
-    // while (1) {
+    // while(i < 40) {
+    while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
         print_game_state(game);
 
@@ -70,7 +70,7 @@ int main (int argc, char **argv)
             }
             
             case UPDATE: {
-                update(game);
+                // update(game);
                 game->server_state = SEND;
                 break;
             }
