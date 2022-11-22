@@ -222,11 +222,11 @@ void send_map(Game game)
     }
 
     // todo: remove
-    strcpy(msg->data, "UPDATED MAP");
-    send_to_all(game, (char*) msg, 11); 
+    //strcpy(msg->data, "UPDATED MAP");
+    //send_to_all(game, (char*) msg, 11); 
     
-    // memcpy(msg->data, game->update_to_send, msg_size);
-    // send_to_all(game, (char*) msg, msg_size); 
+    memcpy(msg->data, game->update_to_send, msg_size);
+    send_to_all(game, (char*) msg, msg_size); 
 }
 
 // helper function to send a message to all registered players
