@@ -237,7 +237,8 @@ void send_map(Game game)
     //send_to_all(game, (char*) msg, 11); 
     
     memcpy(msg->data, game->update_to_send, msg_size);
-    send_to_all(game, (char*) msg, msg_size); 
+    // TODO: change so not hardcoded value 21 for header size
+    send_to_all(game, (char*) msg, 21 + msg_size); 
 }
 
 // helper function to send a message to all registered players
@@ -258,8 +259,9 @@ void send_to_all(Game game, char *msg, int size)
 
 void reset_timeout(Game game)
 {
-    game->timeout->tv_sec = 5;
-    game->timeout->tv_usec = 0;
+    game->timeout->tv_sec = 0;
+    // 500,000 microseconds = 0.5 seconds
+    game->timeout->tv_usec = 250000;
 }
 
 // will change states using select()
@@ -357,8 +359,9 @@ void start_game(Game game)
                 curr->phys.y = MHEIGHT/2;
                 curr->phys.d = DOWN;
              } else {
-                curr->phys.x = MWIDTH/4;
-                curr->phys.y = MHEIGHT/4;
+                // The upper-left corner of the screen
+                curr->phys.x = 6;
+                curr->phys.y = 3;
                 curr->phys.d = UP;
 
              }
