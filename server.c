@@ -70,7 +70,7 @@ int main (int argc, char **argv)
             }
             
             case UPDATE: {
-                // update(game);
+                update(game);
                 game->server_state = SEND;
                 break;
             }
@@ -86,12 +86,14 @@ int main (int argc, char **argv)
                         break;
 
                     case IN_PLAY:
+                        fprintf(stderr, "sending map\n");
                         send_map(game);
                         game->server_state = RECEIVE;
                         break;
 
                     case END_OF_GAME:
-                        fprintf(stderr, "end of game %d\n", game->round);
+                        fprintf(stderr, "end of game %d notification\n",
+                                game->round);
                         game->round++;
                         send_end_game_notifcation(game);
                         
@@ -219,11 +221,12 @@ void send_map(Game game)
 
     if (game->update_to_send == NULL) {
         fprintf(stderr, "update to send is NULL\n");
-        exit(1);
+        // exit(1);
     }
-    memcpy(msg->data, game->update_to_send, msg_size);
+    // memcpy(msg->data, game->update_to_send, msg_size);
+    strcpy(msg->data, "UPDATED MAP");
+    send_to_all(game, (char*) msg, 11); // todo update this!!
 
-    send_to_all(game, (char*) msg, msg_size);
 }
 
 // helper function to send a message to all registered players
