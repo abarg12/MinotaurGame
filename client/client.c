@@ -166,6 +166,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
             if (errno == 4) {
                 continue;
             }
+            client_exit(game_window);
             exit(1);
         }
     
