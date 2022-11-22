@@ -15,12 +15,14 @@ int main (int argc, char **argv)
 	struct hostent *hostp; /* client host info */
 	struct timeval *t = NULL;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <round time>\n", argv[0]);
+	if (argc != 3) {
+		fprintf(stderr, "usage: %s <round time> <file name>\n", argv[0]);
 		exit(1);
 	}
 	portno = 9040;
     ROUND_TIME = atoi(argv[1]);
+    char file_name[MAP_NAME_LEN];
+    strcpy(file_name, argv[2]);
 
 	/* socket: create the parent socket */
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -42,7 +44,7 @@ int main (int argc, char **argv)
     Game game = malloc(sizeof(*game));
     assert (game != NULL);
 
-    initialize_game(game, sockfd);
+    initialize_game(game, sockfd, file_name);
     int i= 0;
     // while(i < 40) {
     while (1) {
@@ -52,7 +54,6 @@ int main (int argc, char **argv)
         switch(game->server_state) {
             case RECEIVE: {
                 if(game->game_state == IN_PLAY && is_round_over(game)) {
-                    fprintf(stderr, "round is over! \n");
                     game->game_state   = END_OF_GAME;
                     game->server_state = SEND;
                     break;
@@ -86,7 +87,7 @@ int main (int argc, char **argv)
                         break;
 
                     case IN_PLAY:
-                        fprintf(stderr, "sending map\n");
+                        // fprintf(stderr, "sending map\n");
                         send_map(game);
                         game->server_state = RECEIVE;
                         break;
@@ -114,7 +115,7 @@ int main (int argc, char **argv)
                 break;
             }
         }
-        i++; fprintf(stderr, "i: %d\n", i);
+        // i++; fprintf(stderr, "i: %d\n", i);
     }
 }
 
@@ -199,6 +200,7 @@ void send_end_game_notifcation(Game game)
     bzero(msg->id, PLAYER_NAME_LEN);
     memcpy(msg->id, "Server", PLAYER_NAME_LEN);
 
+    bzero(msg->data, MAX_DATA_LEN);
     send_to_all(game, (char*) msg, sizeof(*msg));
 }
 
@@ -213,21 +215,11 @@ void send_map(Game game)
     strcpy(msg->id, "Server");
 
     bzero(msg->data, MAX_DATA_LEN);
-    int msg_size = 4 + 1 + game->num_active_players * 22;
-
-    if (game->update_to_send == NULL) {
-        fprintf(stderr, "update to send is NULL\n");
-        // exit(1);
-    }
-
-    // todo: remove
-    //strcpy(msg->data, "UPDATED MAP");
-    //send_to_all(game, (char*) msg, 11); 
-
-    
-    memcpy(msg->data, game->update_to_send, msg_size);
-    // TODO: change so not hardcoded value 21 for header size
-    send_to_all(game, (char*) msg, 21 + msg_size); 
+    int data_size = 4 + 1 + game->num_active_players * 22;
+   
+    memcpy(msg->data, game->update_to_send, data_size);
+    // TODO: change so not hardcoded value 21 for header size: 21 + msg_size
+    send_to_all(game, (char*) msg, sizeof(*msg)); 
 }
 
 // helper function to send a message to all registered players
@@ -248,9 +240,11 @@ void send_to_all(Game game, char *msg, int size)
 
 void reset_timeout(Game game)
 {
-    game->timeout->tv_sec = 0;
+    // game->timeout->tv_sec = 0;
+    game->timeout->tv_sec = 1;
     // 500,000 microseconds = 0.5 seconds
-    game->timeout->tv_usec = 150000;
+    // game->timeout->tv_usec = 150000;
+    game->timeout->tv_usec = 0;
 }
 
 // will change states using select()
@@ -276,7 +270,6 @@ bool receive_data(Game game)
 	}
 
     if (game->timeout->tv_usec == 0) {
-        fprintf(stderr, "timed out\n");
         reset_timeout(game);
         return true;
     }
@@ -370,7 +363,7 @@ void start_game(Game game)
     }
 }
 
-void initialize_game(Game game, int sockfd)
+void initialize_game(Game game, int sockfd, char *file_name)
 {
     // map
     game->map = NULL;
@@ -404,10 +397,11 @@ void initialize_game(Game game, int sockfd)
     // timeout
     game->timeout = malloc(sizeof(struct timeval));
     assert(game->timeout != NULL);
-    game->timeout->tv_sec = 5;
-    game->timeout->tv_usec = 0;
+    // game->timeout->tv_sec = 1;
+    // game->timeout->tv_usec = 0;
+    reset_timeout(game);
 
-    load_map("maps/map1", game);
+    load_map(file_name, game);
 }
 
 // set a round's start time to the current clock time.

@@ -100,7 +100,12 @@ void remove_player(Game game, char *name)
     Player found_p = find_player(game, name);
     if (found_p != NULL) {
         fprintf(stderr, "removing player %s\n", name );
+        
         game->num_registered_players--;
+
+        if (found_p->player_state == PLAYING) {
+            game->num_active_players--;
+        }
 
         Player curr = game->players_head;
         Player prev = curr;

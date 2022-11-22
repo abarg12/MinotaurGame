@@ -87,7 +87,7 @@ typedef struct __attribute__((__packed__)) Message {
 // } *Frame;
 
 void start_game(Game game);
-void initialize_game(Game game, int sockfd);
+void initialize_game(Game game, int sockfd, char *file_name);
 bool receive_data(Game game);
 void print_game_state(Game game);
 void reset_timeout(Game game);
