@@ -119,6 +119,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     int i, x, y;
+    fprintf(stderr, "active players: %d\n", g->num_active_players);
     for (i = 0; i < g->num_active_players; i++) {
         if (old_coords[i].d == UP) {
            x = old_coords[i].x;
