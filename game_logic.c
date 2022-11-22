@@ -103,10 +103,12 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             p = p->next;
             continue;
         }
+        fprintf(stderr, "player vals: %d %d\n", p->phys.x, p->phys.y);
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
         old_coords[n].d = p->phys.d;
 
+        n = n + 1;
         p = p->next;
     }
 }
@@ -141,6 +143,8 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
+    fprintf(stderr, "%d   ", x);
+    fprintf(stderr, "%d\n", y);
     if ((g->map)[n] == '1') {
          return true; 
     }
