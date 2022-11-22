@@ -122,15 +122,15 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
     for (i = 0; i < g->num_active_players; i++) {
         if (old_coords[i].d == UP) {
            x = old_coords[i].x;
-           y = old_coords[i].y + 1;  
+           y = old_coords[i].y - 1;  
         } else if (old_coords[i].d == RIGHT) {
-           x = old_coords[i].x + 1;
+           x = old_coords[i].x + 2;
            y = old_coords[i].y;  
         } else if (old_coords[i].d == DOWN) {
            x = old_coords[i].x;
-           y = old_coords[i].y - 1;  
+           y = old_coords[i].y + 1;  
         } else {
-           x = old_coords[i].x - 1;
+           x = old_coords[i].x - 2;
            y = old_coords[i].y;  
         }
 

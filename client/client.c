@@ -479,7 +479,7 @@ void update_map(char *buf, WINDOW *game_window) {
            val = map[x + (GWIDTH * y)];
            if (val == '1') {
                wattron(game_window, COLOR_PAIR(1));
-               waddch(game_window, '.');
+               waddch(game_window, ' ');
                wattroff(game_window, COLOR_PAIR(1));
            } else if (val == '0') {
                waddch(game_window, ' '); 
@@ -487,26 +487,28 @@ void update_map(char *buf, WINDOW *game_window) {
         }
     }
         
-    //TODO: parse buffer intelligently
-    /*
+    //TODO: parse buffer for any number of players
+    // offset = 21 for header + 4 for seq_no + 1 for num players
+    //          + 20 for player name
     int minotaurx = buf[46];
     int minotaury = buf[47];
 
     int humanx = buf[68];
     int humany = buf[69];
-*/
+
+/*** Hard-coded values for testing
     int minotaurx = GWIDTH / 2;
     int minotaury = GHEIGHT / 2;
     int humanx = GWIDTH / 4;
     int humany = GHEIGHT / 4;
-
+*/
     
     wmove(game_window, minotaury, minotaurx);
     wattron(game_window, COLOR_PAIR(2));
     waddch(game_window,'M');
     wattroff(game_window, COLOR_PAIR(2));
     
-    wmove(game_window, humanx, humany); 
+    wmove(game_window, humany, humanx); 
     wattron(game_window, COLOR_PAIR(3));
     waddch(game_window, 'H');
     wattroff(game_window, COLOR_PAIR(3));
