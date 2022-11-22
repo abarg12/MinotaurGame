@@ -87,7 +87,7 @@ int main(int argc, char **argv) {
     initscr();
     curs_set(2);
     refresh();
-    WINDOW *game_window;
+    WINDOW *game_window = NULL;
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_BLACK);
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
             }
         }
     }
-client_exit(game_window);
+    client_exit(game_window);
     return 0;
 }
 
@@ -433,7 +433,6 @@ void print_buffer(char *buf) {
 
 
 void update_map(char *buf, WINDOW *game_window) {
-    delwin(game_window);
     draw_map(game_window);
 
     int x, y;

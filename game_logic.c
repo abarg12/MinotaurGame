@@ -59,7 +59,7 @@ void update(Game g) {
     // get what the coordinates would be assuming no player collisions
     PlayerPhysics old_coords[g->num_active_players];
     PlayerPhysics new_coords[g->num_active_players]; 
-
+ 
     get_curr_coords(g, old_coords);
     // update coords and take walls into consideration
     get_new_coords(g, old_coords, new_coords); 
@@ -103,7 +103,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             p = p->next;
             continue;
         }
-        fprintf(stderr, "player vals: %d %d\n", p->phys.x, p->phys.y);
+        fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
         old_coords[n].d = p->phys.d;
@@ -134,16 +134,18 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
         if (check_if_wall(g, x, y)) {
             new_coords[i].x = old_coords[i].x;
             new_coords[i].y = old_coords[i].y;     
+            new_coords[i].d = old_coords[i].d;
         } else {
             new_coords[i].x = x;
             new_coords[i].y = y; 
+            new_coords[i].d = old_coords[i].d;
         }
     }
 }
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
-    fprintf(stderr, "%d   ", x);
+    fprintf(stderr, "checking for wall on coordinates: %d   ", x);
     fprintf(stderr, "%d\n", y);
     if ((g->map)[n] == '1') {
          return true; 
