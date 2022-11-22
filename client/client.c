@@ -24,12 +24,13 @@ void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
 void download_map(char *map_name);
 void draw_map(WINDOW *game_window);
+void reset_map(WINDOW *game_window);
 void update_map(char *buf, WINDOW *game_window);
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
-void print_buffer(char *buf);
+void print_buffer(char *buf, int n);
 void  parse_start_info(char *buf, char *player_name);
 
 char *map;
@@ -134,6 +135,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     int n;
     move_seq = 0;
 
+
     move(0,0);
     clrtoeol();
     printw("GAME IN PROGRESS");
@@ -164,6 +166,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
             if (errno == 4) {
                 continue;
             }
+            client_exit(game_window);
             exit(1);
         }
     
@@ -181,14 +184,14 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 else {
                     // TODO: map data received, print it out
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-                    move(2,0);
-                    clrtoeol();
-                    printw("The client received %d bytes of data including the header\n");
-                    refresh();
+                   // move(2,0);
+                   // clrtoeol();
+                   // printw("The client received %d bytes of data including the header\n");
+                   // refresh();
                     if (buf[0] == 3) {
                         update_map(buf, game_window);
                     }
-                    print_buffer(buf);
+                    //print_buffer(buf, n);
                 }
             }
         } 
@@ -399,7 +402,30 @@ void draw_map(WINDOW *game_window) {
 }
 
 
-void print_buffer(char *buf) {
+void reset_map(WINDOW *game_window) {
+    delwin(game_window);
+    game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
+
+    int x, y;
+    char val;
+    for (y = 0; y < GHEIGHT; y++) {
+        wmove(game_window, y, 0);
+        for (x = 0; x < GWIDTH; x++) {
+           val = map[x + (GWIDTH * y)];
+           if (val == '1') {
+               wattron(game_window, COLOR_PAIR(2));
+               waddch(game_window, '.');
+               wattroff(game_window, COLOR_PAIR(2));
+           } else if (val == '0') {
+               waddch(game_window, ' '); 
+           }
+        }
+    }
+    wrefresh(game_window);
+}
+
+
+void print_buffer(char *buf, int n) {
     int i;
     move(0,0);
     clrtoeol();
@@ -409,9 +435,16 @@ void print_buffer(char *buf) {
 
 
     //if (msg_struct->type == 3 || msg_struct->type == 5) {
-        printw("Msg type: %d  ", msg_struct->type);
-        printw("Name: %s  ", msg_struct->ID);
-        printw("Data: %s  ", msg_struct->DATA);
+    printw("Msg type: %d  ", msg_struct->type);
+    printw("Name: %s  ", msg_struct->ID);
+    //printw("Data: %s  ", msg_struct->DATA);
+    printw("Data: ");
+    int data_len = n;
+    for (i = 26; i < data_len; i++) {
+         printw("%c", buf[i]);
+    }
+
+
     //} else {
    
 /*
@@ -433,27 +466,46 @@ void print_buffer(char *buf) {
 
 
 void update_map(char *buf, WINDOW *game_window) {
-    draw_map(game_window);
+    if (game_window != NULL) {
+        delwin(game_window);
+    }
+    game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
 
     int x, y;
     char val;
+    for (y = 0; y < GHEIGHT; y++) {
+        wmove(game_window, y, 0);
+        for (x = 0; x < GWIDTH; x++) {
+           val = map[x + (GWIDTH * y)];
+           if (val == '1') {
+               wattron(game_window, COLOR_PAIR(1));
+               waddch(game_window, ' ');
+               wattroff(game_window, COLOR_PAIR(1));
+           } else if (val == '0') {
+               waddch(game_window, ' '); 
+           }
+        }
+    }
         
-    //TODO: parse buffer intelligently
-    /*
+    //TODO: parse buffer for any number of players
+    // offset = 21 for header + 4 for seq_no + 1 for num players
+    //          + 20 for player name
     int minotaurx = buf[46];
     int minotaury = buf[47];
 
     int humanx = buf[68];
     int humany = buf[69];
-*/
+
+/*** Hard-coded values for testing
     int minotaurx = GWIDTH / 2;
     int minotaury = GHEIGHT / 2;
     int humanx = GWIDTH / 4;
     int humany = GHEIGHT / 4;
-
+*/
+    
     wmove(game_window, minotaury, minotaurx);
     wattron(game_window, COLOR_PAIR(2));
-    waddch(game_window, 'M');
+    waddch(game_window,'M');
     wattroff(game_window, COLOR_PAIR(2));
     
     wmove(game_window, humany, humanx); 

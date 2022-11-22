@@ -54,3 +54,6 @@ dkms.conf
 
 # vim temp files
 *.sw?
+
+# .nfs files
+.nfs*

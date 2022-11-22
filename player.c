@@ -17,8 +17,7 @@ void register_move(Game game, char *buf)
             int s;
             memcpy(&s, buf + MOVE_SEQUENCE_INDEX, 4);
 
-            uint32_t move_sequence = ntohl(s);
-            fprintf(stderr, "move sequence %d\n", move_sequence);
+            int move_sequence = ntohl(s);
             if (move_sequence > found_p->last_move) {
                 found_p->phys.d = d;
                 found_p->last_move = move_sequence;
