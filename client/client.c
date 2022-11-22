@@ -433,16 +433,24 @@ void print_buffer(char *buf) {
 
 
 void update_map(char *buf, WINDOW *game_window) {
+    delwin(game_window);
+    draw_map(game_window);
+
     int x, y;
     char val;
         
     //TODO: parse buffer intelligently
-    /*int minotaurx = buf[46];
+    /*
+    int minotaurx = buf[46];
     int minotaury = buf[47];
 
     int humanx = buf[68];
     int humany = buf[69];
-
+*/
+    int minotaurx = GWIDTH / 2;
+    int minotaury = GHEIGHT / 2;
+    int humanx = GWIDTH / 4;
+    int humany = GHEIGHT / 4;
 
     wmove(game_window, minotaury, minotaurx);
     wattron(game_window, COLOR_PAIR(2));
@@ -455,7 +463,6 @@ void update_map(char *buf, WINDOW *game_window) {
     wattroff(game_window, COLOR_PAIR(3));
 
     wrefresh(game_window);
-    */
 }
 
 
