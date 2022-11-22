@@ -103,4 +103,5 @@ void send_start_notification(Game game);
 void send_end_game_notifcation(Game game);
 void update_players(Game game);
 
+void add_active_players(Game game, char *j);
 #endif

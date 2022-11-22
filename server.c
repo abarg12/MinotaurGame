@@ -168,6 +168,25 @@ void send_start_notification(Game game)
     // add all the active players 
     int i;
     char *j = msg->data + MAP_NAME_LEN + 1; // +1 to go past num players
+
+    add_active_players(game, j);
+    // Player p = game->players_head;
+    // while (p != NULL) {
+    //     if (p->player_state == PLAYING) {
+    //         strcpy(j, p->name);
+    //         j += PLAYER_NAME_LEN;
+    //     }
+    //     p = p->next;
+    // }
+  
+    send_to_all(game, (char*)msg, sizeof(*msg));
+    
+    free(msg);
+}
+
+// adds the names of all the active players into array pointed to by j.
+void add_active_players(Game game, char *j) 
+{
     Player p = game->players_head;
     while (p != NULL) {
         if (p->player_state == PLAYING) {
@@ -176,17 +195,6 @@ void send_start_notification(Game game)
         }
         p = p->next;
     }
-  
-    // fprintf(stderr, "* * * * * *\n");
-
-    // for (i = MAP_NAME_LEN + 1; i < 512; i++) {
-    //     fprintf(stderr, "%c", msg->data[i]);
-    // }
-    // fprintf(stderr, "\n* * * \n");
-
-    send_to_all(game, (char*)msg, sizeof(*msg));
-    
-    free(msg);
 }
 
 // # Players <char> (1 byte)
@@ -223,25 +231,19 @@ void send_map(Game game)
         fprintf(stderr, "update to send is NULL\n");
         // exit(1);
     }
-    // memcpy(msg->data, game->update_to_send, msg_size);
-    strcpy(msg->data, "UPDATED MAP");
-    send_to_all(game, (char*) msg, 11); // todo update this!!
 
+    // todo: remove
+    strcpy(msg->data, "UPDATED MAP");
+    send_to_all(game, (char*) msg, 11); 
+    
+    // memcpy(msg->data, game->update_to_send, msg_size);
+    // send_to_all(game, (char*) msg, msg_size); 
 }
 
 // helper function to send a message to all registered players
 void send_to_all(Game game, char *msg, int size) 
 {
-    // fprintf(stderr, "MESSAGE\n");
-    // int i;
-    // for (i = MAP_NAME_LEN + 1; i < size; i++) {
-    //     fprintf(stderr, "%c", msg[i]);
-
-    // }
-    // fprintf(stderr, "\nend of message\n");
-
     Player curr = game->players_head;
-
     while (curr != NULL) {   
         int bytes = sendto(game->sockfd, msg, size, 0, 
                            (struct sockaddr *) curr->player_addr, 
