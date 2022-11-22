@@ -90,7 +90,11 @@ void update(Game g) {
         curr_player = curr_player->next;
     }
 
-
+    int i;
+    for (i = 0; i < msg_size; i++) {
+        fprintf(stderr, "%c", msg[i]);
+    }
+    fprintf(stderr, "\n");
     g->update_to_send = msg;
 }
 
