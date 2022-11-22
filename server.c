@@ -261,7 +261,7 @@ void reset_timeout(Game game)
 {
     game->timeout->tv_sec = 0;
     // 500,000 microseconds = 0.5 seconds
-    game->timeout->tv_usec = 250000;
+    game->timeout->tv_usec = 150000;
 }
 
 // will change states using select()
