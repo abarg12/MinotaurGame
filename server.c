@@ -114,8 +114,7 @@ int main (int argc, char **argv)
                 break;
             }
         }
-        i++;
-        fprintf(stderr, "i: %d\n", i);
+        i++; fprintf(stderr, "i: %d\n", i);
     }
 }
 
@@ -166,18 +165,8 @@ void send_start_notification(Game game)
     fprintf(stderr, "num active players: %d\n",  msg->data[MAP_NAME_LEN]);
 
     // add all the active players 
-    int i;
     char *j = msg->data + MAP_NAME_LEN + 1; // +1 to go past num players
-
     add_active_players(game, j);
-    // Player p = game->players_head;
-    // while (p != NULL) {
-    //     if (p->player_state == PLAYING) {
-    //         strcpy(j, p->name);
-    //         j += PLAYER_NAME_LEN;
-    //     }
-    //     p = p->next;
-    // }
   
     send_to_all(game, (char*)msg, sizeof(*msg));
     
