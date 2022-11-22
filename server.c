@@ -190,7 +190,6 @@ void add_active_players(Game game, char *j)
 // Player 1 name <char*> (20 bytes)
 // Player 1 score <int> (4 bytes)
 // ...
-// while loop that memcpy's 3 things at once i times, advances pointer in array by 24 bytes
 void send_end_game_notifcation(Game game)
 {
     Message msg = malloc(sizeof(*msg));
@@ -224,6 +223,7 @@ void send_map(Game game)
     // todo: remove
     //strcpy(msg->data, "UPDATED MAP");
     //send_to_all(game, (char*) msg, 11); 
+
     
     memcpy(msg->data, game->update_to_send, msg_size);
     send_to_all(game, (char*) msg, msg_size); 
