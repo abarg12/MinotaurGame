@@ -21,8 +21,8 @@ int main (int argc, char **argv)
 	}
 	portno = 9040;
     ROUND_TIME = atoi(argv[1]);
-    char file_name[MAP_NAME_LEN];
-    strcpy(file_name, argv[2]);
+    char map_name[MAP_NAME_LEN];
+    strcpy(map_name, argv[2]);
 
 	/* socket: create the parent socket */
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -44,7 +44,7 @@ int main (int argc, char **argv)
     Game game = malloc(sizeof(*game));
     assert (game != NULL);
 
-    initialize_game(game, sockfd, file_name);
+    initialize_game(game, sockfd, map_name);
     int i= 0;
     // while(i < 40) {
     while (1) {
@@ -79,7 +79,7 @@ int main (int argc, char **argv)
             case SEND: {
                 switch(game->game_state) {
                     case LAUNCH:
-                        fprintf(stderr, "send start notification \n");
+                        // fprintf(stderr, "send start notification \n");
                         send_start_notification(game);
                         set_start_time(game);
                         game->game_state   = IN_PLAY;
@@ -93,8 +93,7 @@ int main (int argc, char **argv)
                         break;
 
                     case END_OF_GAME:
-                        fprintf(stderr, "end of game %d notification\n",
-                                game->round);
+                        // fprintf(stderr, "end of game %d notification\n",game->round);
                         game->round++;
                         send_end_game_notifcation(game);
                         
@@ -109,7 +108,7 @@ int main (int argc, char **argv)
                             game->server_state = SEND;
                         }
                         
-                        set_start_time(game); // todo: feels hacky...
+                        set_start_time(game);
                         break;
                 }
                 break;
@@ -160,7 +159,8 @@ void send_start_notification(Game game)
     strcpy(msg->id, "Server");
 
     bzero(msg->data, MAX_DATA_LEN);
-    strcpy(msg->data, "map1");
+    strcpy(msg->data, game->map_name);
+    fprintf(stderr, "map_name %s\n", game->map_name);
     
     msg->data[MAP_NAME_LEN] = game->num_active_players;
     fprintf(stderr, "num active players: %d\n",  msg->data[MAP_NAME_LEN]);
@@ -284,7 +284,9 @@ bool receive_data(Game game)
         case REGISTER: {
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
-            start_game(game);
+            if (game->game_state != IN_PLAY) {
+                start_game(game);
+            }
             print_players(game);
             break;
         }
@@ -366,6 +368,8 @@ void start_game(Game game)
 void initialize_game(Game game, int sockfd, char *file_name)
 {
     // map
+    bzero(game->map_name, MAP_NAME_LEN);
+    strcpy(game->map_name, file_name);
     game->map = NULL;
     game->update_to_send = NULL;
 

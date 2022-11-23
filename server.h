@@ -54,6 +54,7 @@ typedef enum GameState {
 } GameState;
 
 typedef struct Game {
+    char        map_name[MAP_NAME_LEN];
     int         sockfd;
     GameState   game_state;
     ServerState server_state;
