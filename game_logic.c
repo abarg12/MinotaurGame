@@ -156,6 +156,10 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
                 new_coords[i].y = old_coords[i].y;     
                 new_coords[i].d = old_coords[i].d;
             } else {
+                new_coords[i].x = x;
+                new_coords[i].y = y;     
+                new_coords[i].d = old_coords[i].d;
+
                 // see if they can move a second space in same direction
                 if (old_coords[i].d == RIGHT) {
                     x = x + 1;
