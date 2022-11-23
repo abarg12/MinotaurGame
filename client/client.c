@@ -13,8 +13,6 @@
 #include "client.h"
 
 #define BUFSIZE 533
-//#define GHEIGHT 14
-//#define GWIDTH 44
 
 #define GHEIGHT 28
 #define GWIDTH  96
@@ -32,6 +30,7 @@ void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
 void print_buffer(char *buf, int n);
 void parse_start_info(char *buf, char *player_name);
+void parse_reg_ack(char *buf);
 
 char *map_name;
 char *map;
@@ -39,18 +38,12 @@ int move_seq;
 enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
 
 int main(int argc, char **argv) {
-/*    
-    char *hostname;
-    int port_num;
-    int sockfd;
-    int serverlen;
-    struct sockaddr_in serveraddr;
-    struct hostent *server;
-*/
     ServerData sd;
     char buf[BUFSIZE];
     char *player_name = malloc(20);
-    
+    map_name = malloc(32);
+
+   
     if (argc == 1) {
         sd.hostname = "comp112-05.cs.tufts.edu";
         sd.port_num = 9040;
@@ -65,7 +58,7 @@ int main(int argc, char **argv) {
     /* socket: create the socket */
     sd.sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sd.sockfd < 0) { 
-        fprintf(stderr, "ERROR opening socket");
+        fprintf(stderr, "ERROR opening socket\n");
         exit(1);
     }
 
@@ -84,9 +77,6 @@ int main(int argc, char **argv) {
     sd.serveraddr.sin_port = htons(sd.port_num);
     sd.serverlen = sizeof(sd.serveraddr);
 
-    // initialize constants
-    map_name = malloc(32);
-
     // start ncurses mode
     initscr();
     curs_set(2);
@@ -98,6 +88,7 @@ int main(int argc, char **argv) {
     init_pair(3, COLOR_GREEN, COLOR_BLACK);
     init_pair(4, COLOR_RED, COLOR_RED);
     init_pair(5, COLOR_GREEN, COLOR_GREEN);
+    init_pair(6, COLOR_BLUE, COLOR_BLACK);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -110,17 +101,21 @@ int main(int argc, char **argv) {
 
             case PLAYING: {
                 map = malloc(GWIDTH * GHEIGHT);
-                // TODO: make this dynamic
                 download_map();
                 draw_map(game_window);
                 pstate = play_loop(&sd, game_window, player_name); 
-                sentinel = 0;
+                free(map);
+                break;
+            }
+
+            case END_OF_GAME: {
+
                 break;
             }
 
             default: {
-                fprintf(stderr, "case not handled\n");
                 client_exit(game_window);
+                fprintf(stderr, "switch case not handled, AKA state machine fail\n");
                 exit(1);
             }
         }
@@ -143,7 +138,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
 
     move(0,0);
     clrtoeol();
-    printw("GAME IN PROGRESS");
+    printw(strcat("GAME IN PROGRESS using map named: ", map_name));
     
     move(1,0);
     clrtoeol();
@@ -157,7 +152,9 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         printw("MINOTAUR"); 
         attroff(COLOR_PAIR(2));
     } else {
+        attron(COLOR_PAIR(6));
         printw("SPECTATOR");
+        attroff(COLOR_PAIR(6));
     }
     refresh();
 
@@ -183,20 +180,27 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                     // exit when parse int returns -1
                     if (parse_instr(sd, player_name) < 0) {
                         client_exit(game_window);
-                        exit(0);
+                        fprintf(stderr, "failed on stdin read\n");
+                        exit(1);
                     }
                 }
                 else {
-                    // TODO: map data received, print it out
+                    // interpret messages from server 
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-                   // move(2,0);
-                   // clrtoeol();
-                   // printw("The client received %d bytes of data including the header\n");
-                   // refresh();
                     if (buf[0] == 3) {
                         update_map(buf, game_window);
                     }
-                    //print_buffer(buf, n);
+                    else if (buf[0] == 6) {
+                       // TODO: handle endgame notification 
+                    }
+                    else if (buf[0] == 7) {
+                        // TODO: handle responding to server ping
+                    }
+                    else {
+                        client_exit(game_window);
+                        fprintf(stderr, "error due to message type set as: %d\n", buf[0]);
+                        exit(1);
+                    }
                 }
             }
         } 
@@ -279,6 +283,7 @@ void send_mv_inst(ServerData *sd, char *player_name, char move_type) {
         n = sendto(sd->sockfd, msg_arr, 533, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
         if (n < 0) {
             fprintf(stderr, "error in sending move instruction\n");
+            client_exit(NULL);
             exit(1);
         }
 }
@@ -318,8 +323,8 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         client_exit(game_window);
         exit(0);
     } else {
-        mvwprintw(game_window, 6, 3, "Sent request to game server");
-        mvwprintw(game_window, 7, 3, "Waiting for game to start");
+        mvwprintw(game_window, 6, 3, "Sending request to join game server");
+        mvwprintw(game_window, 7, 3, "Waiting on server response...");
         wrefresh(game_window);
         registration_rq(sd, player_name);
         delwin(game_window);
@@ -339,28 +344,27 @@ void registration_rq(ServerData *sd, char *player_name) {
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
 
+    // send the registration req message
     n = sendto(sd->sockfd, rrq, 21, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
     if (n < 0) {
-        fprintf(stderr, "sendto error\n");
-        exit(1);
-    }
-
-    // TODO: connect to server to get start signal
-    //buf[0] = 5;
-    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-
-    // Get game start notification
-    if (buf[0] != 5) {
-        // TODO: handle the case when spectator is joining in the middle of a game
-        //              might involve setting role as SPECTATOR
-        fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
         client_exit(NULL);
+        fprintf(stderr, "sendto error for registration message\n");
         exit(1);
-    } else {
-        // TODO: Figure out how to parse role from game start notification
-        parse_start_info(buf, player_name);
     }
-    
+
+    // get the registration ACK to continue
+    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+    if (buf[0] == 9) {
+        parse_reg_ack(buf);
+    } else {
+        //client_exit(NULL);
+        //fprintf(stderr, "First message from server was not Registration-Ack\n");
+        //exit(1);
+        strcpy(map_name, "../maps/map2");
+    }
+
+    // Everyone starts as a spectator
+    role = SPECTATOR;
 
     return;
 }
@@ -371,6 +375,9 @@ void registration_rq(ServerData *sd, char *player_name) {
 void client_exit(WINDOW *game_window) {
     if (game_window != NULL) {
         delwin(game_window);
+    }
+    if (map_name != NULL) {
+        free(map_name);
     }
     endwin();
 }
@@ -384,7 +391,7 @@ void download_map() {
     printf(file_location);
     FILE *fptr = fopen(file_location, "rb");
     if (fptr == NULL) {
-        fprintf(stderr, "Map does not exist at specified location\n");
+        fprintf(stderr, "Map does not exist at specified location in files\n");
         exit(1);
     }
 
@@ -404,7 +411,7 @@ void draw_map(WINDOW *game_window) {
            val = map[x + (GWIDTH * y)];
            if (val == '1') {
                wattron(game_window, COLOR_PAIR(1));
-               waddch(game_window, '.');
+               waddch(game_window, ' ');
                wattroff(game_window, COLOR_PAIR(1));
            } else if (val == '0') {
                waddch(game_window, ' '); 
@@ -506,27 +513,30 @@ void update_map(char *buf, WINDOW *game_window) {
     int minotaurx = buf[46];
     int minotaury = buf[47];
 
-    int humanx = buf[68];
-    int humany = buf[69];
-
-/*** Hard-coded values for testing
-    int minotaurx = GWIDTH / 2;
-    int minotaury = GHEIGHT / 2;
-    int humanx = GWIDTH / 4;
-    int humany = GHEIGHT / 4;
-*/
-    
     wmove(game_window, minotaury, minotaurx);
     wattron(game_window, COLOR_PAIR(4));
     waddch(game_window,' ');
     waddch(game_window,' ');
     wattroff(game_window, COLOR_PAIR(4));
     
-    wmove(game_window, humany, humanx); 
-    wattron(game_window, COLOR_PAIR(5));
-    waddch(game_window, ' ');
-    waddch(game_window, ' ');
-    wattroff(game_window, COLOR_PAIR(5));
+
+    int num_act_players = (int) buf[25];
+    int offset = 68;
+    int humanx, humany;
+    // start at one to skip the minotaur who has already been drawn
+    int i;
+    for (i = 1; i < num_act_players; i++) {
+        humanx = buf[offset];
+        humany = buf[offset + 1];
+
+        wmove(game_window, humany, humanx); 
+        wattron(game_window, COLOR_PAIR(5));
+        waddch(game_window, ' ');
+        waddch(game_window, ' ');
+        wattroff(game_window, COLOR_PAIR(5));
+
+        offset = offset + 22;
+    }
 
     wrefresh(game_window);
 }
@@ -569,5 +579,12 @@ void parse_start_info(char *buf, char *player_name) {
     refresh();
 }
 
+
+
+void parse_reg_ack(char *buf) {
+    // get the map-name from the ack
+    int map_offset = 21;
+    memcpy(map_name, buf + map_offset, 32);
+}
 
 
