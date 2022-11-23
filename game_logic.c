@@ -121,29 +121,52 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
     int i, x, y;
     fprintf(stderr, "active players: %d\n", g->num_active_players);
     for (i = 0; i < g->num_active_players; i++) {
-        if (old_coords[i].d == UP) {
-           x = old_coords[i].x;
-           y = old_coords[i].y - 1;  
-        } else if (old_coords[i].d == RIGHT) {
-           x = old_coords[i].x + 2;
-           y = old_coords[i].y;  
-        } else if (old_coords[i].d == DOWN) {
-           x = old_coords[i].x;
-           y = old_coords[i].y + 1;  
-        } else {
-           x = old_coords[i].x - 2;
-           y = old_coords[i].y;  
-        }
+        // have to split up cases since up/down is only a move by one 
+        if (old_coords[i].d == UP || old_coords[i].d == DOWN) {
+            if (old_coords[i].d == UP) {
+               x = old_coords[i].x;
+               y = old_coords[i].y - 1;  
+            } else {
+               x = old_coords[i].x;
+               y = old_coords[i].y + 1;  
+            }
+        
+            // double wall check to allow for bigger player characters
+            if (check_if_wall(g, x, y) || check_if_wall(g, x + 1, y)) {
+                new_coords[i].x = old_coords[i].x;
+                new_coords[i].y = old_coords[i].y;     
+                new_coords[i].d = old_coords[i].d;
+            } else {
+                new_coords[i].x = x;
+                new_coords[i].y = y; 
+                new_coords[i].d = old_coords[i].d;
+            }
+        } 
+        else { // this is the case where player is moving left or right
+            if (old_coords[i].d == RIGHT) {
+               x = old_coords[i].x + 1;
+               y = old_coords[i].y;  
+            } else {
+               x = old_coords[i].x - 1;
+               y = old_coords[i].y;  
+            } 
+            // double wall check to allow for bigger player characters
+            if (check_if_wall(g, x, y) || check_if_wall(g, x + 1, y)) {
+                new_coords[i].x = old_coords[i].x;
+                new_coords[i].y = old_coords[i].y;     
+                new_coords[i].d = old_coords[i].d;
+            } else {
+                // see if they can move a second space in same direction
+                if (old_coords[i].d == RIGHT) {
+                    x = x + 1;
+                } else {
+                    x = x - 1;
+                }
 
-
-        if (check_if_wall(g, x, y)) {
-            new_coords[i].x = old_coords[i].x;
-            new_coords[i].y = old_coords[i].y;     
-            new_coords[i].d = old_coords[i].d;
-        } else {
-            new_coords[i].x = x;
-            new_coords[i].y = y; 
-            new_coords[i].d = old_coords[i].d;
+                if (!(check_if_wall(g, x, y) || check_if_wall(g, x + 1, y))) {
+                    new_coords[i].x = x;
+                }
+            }
         }
     }
 }

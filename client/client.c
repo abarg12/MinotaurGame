@@ -22,7 +22,7 @@
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
-void download_map(char *map_name);
+void download_map();
 void draw_map(WINDOW *game_window);
 void reset_map(WINDOW *game_window);
 void update_map(char *buf, WINDOW *game_window);
@@ -31,8 +31,9 @@ int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
 void print_buffer(char *buf, int n);
-void  parse_start_info(char *buf, char *player_name);
+void parse_start_info(char *buf, char *player_name);
 
+char *map_name;
 char *map;
 int move_seq;
 enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
@@ -83,6 +84,8 @@ int main(int argc, char **argv) {
     sd.serveraddr.sin_port = htons(sd.port_num);
     sd.serverlen = sizeof(sd.serveraddr);
 
+    // initialize constants
+    map_name = malloc(32);
 
     // start ncurses mode
     initscr();
@@ -93,6 +96,8 @@ int main(int argc, char **argv) {
     init_pair(1, COLOR_WHITE, COLOR_WHITE);
     init_pair(2, COLOR_RED, COLOR_BLACK);
     init_pair(3, COLOR_GREEN, COLOR_BLACK);
+    init_pair(4, COLOR_RED, COLOR_RED);
+    init_pair(5, COLOR_GREEN, COLOR_GREEN);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -106,7 +111,7 @@ int main(int argc, char **argv) {
             case PLAYING: {
                 map = malloc(GWIDTH * GHEIGHT);
                 // TODO: make this dynamic
-                download_map("../maps/map1");                
+                download_map();
                 draw_map(game_window);
                 pstate = play_loop(&sd, game_window, player_name); 
                 sentinel = 0;
@@ -349,6 +354,7 @@ void registration_rq(ServerData *sd, char *player_name) {
         // TODO: handle the case when spectator is joining in the middle of a game
         //              might involve setting role as SPECTATOR
         fprintf(stderr, "Was expecting Game Start msg from server but got something else\n");
+        client_exit(NULL);
         exit(1);
     } else {
         // TODO: Figure out how to parse role from game start notification
@@ -363,13 +369,20 @@ void registration_rq(ServerData *sd, char *player_name) {
 // TODO: figure out a way to clear up all memory when closing
 //  i.e. player name and other malloc'd data
 void client_exit(WINDOW *game_window) {
-    delwin(game_window);
+    if (game_window != NULL) {
+        delwin(game_window);
+    }
     endwin();
 }
 
 
-void download_map(char *map_name) {
-    FILE *fptr = fopen(map_name, "rb");
+void download_map() {
+    char file_location[60];
+    bzero(file_location, 60);
+    strcat(file_location, "../");
+    strcat(file_location, map_name);
+    printf(file_location);
+    FILE *fptr = fopen(file_location, "rb");
     if (fptr == NULL) {
         fprintf(stderr, "Map does not exist at specified location\n");
         exit(1);
@@ -504,23 +517,27 @@ void update_map(char *buf, WINDOW *game_window) {
 */
     
     wmove(game_window, minotaury, minotaurx);
-    wattron(game_window, COLOR_PAIR(2));
-    waddch(game_window,'M');
-    wattroff(game_window, COLOR_PAIR(2));
+    wattron(game_window, COLOR_PAIR(4));
+    waddch(game_window,' ');
+    waddch(game_window,' ');
+    wattroff(game_window, COLOR_PAIR(4));
     
     wmove(game_window, humany, humanx); 
-    wattron(game_window, COLOR_PAIR(3));
-    waddch(game_window, 'H');
-    wattroff(game_window, COLOR_PAIR(3));
+    wattron(game_window, COLOR_PAIR(5));
+    waddch(game_window, ' ');
+    waddch(game_window, ' ');
+    wattroff(game_window, COLOR_PAIR(5));
 
     wrefresh(game_window);
 }
 
 
-void  parse_start_info(char *buf, char *player_name) {
+void parse_start_info(char *buf, char *player_name) {
     int i, offset, player_name_size;
     char curr_name[20];
     int num_active_players = buf[53];
+
+    memcpy(map_name, buf + 21, 32);
 
     /*
     int j;
