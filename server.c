@@ -284,7 +284,7 @@ bool receive_data(Game game)
         case REGISTER: {
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
-            if (game->game_state != IN_PLAY) {
+            if (game->game_state == WAITING) {
                 start_game(game);
             }
             print_players(game);
