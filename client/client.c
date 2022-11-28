@@ -178,14 +178,8 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
 
     move(0,0);
     clrtoeol();
-<<<<<<< HEAD
-    // if (map_name != NULL) {
-    //     printw(strcat("GAME IN PROGRESS using map named: ", map_name));
-    // }
-=======
     printw("GAME IN PROGRESS using map named: ");
     printw(map_name);
->>>>>>> 28dc8278b3aafd0c863469be433af28d58bce2fe
     
     move(1,0);
     clrtoeol();
