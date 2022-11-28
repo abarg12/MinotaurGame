@@ -441,9 +441,9 @@ void client_exit(WINDOW *game_window) {
 void download_map() {
     char file_location[60];
     bzero(file_location, 60);
-    // strcat(file_location, "../");
+    strcat(file_location, "../");
     strcat(file_location, map_name);
-    fprintf(stderr, "file location: \n%s\n", file_location);
+    //fprintf(stderr, "file location: \n%s\n", file_location);
     FILE *fptr = fopen(file_location, "rb");
     if (fptr == NULL) {
         fprintf(stderr, "Map does not exist at specified location in files\n");
