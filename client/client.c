@@ -17,14 +17,15 @@
 #define GHEIGHT 28
 #define GWIDTH  96
 
-PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 void client_exit(WINDOW *game_window);
 void registration_rq(ServerData *sd, char *player_name);
 void download_map();
 void draw_map(WINDOW *game_window);
 void reset_map(WINDOW *game_window);
 void update_map(char *buf, WINDOW *game_window);
+PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
+PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 int parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
@@ -109,7 +110,7 @@ int main(int argc, char **argv) {
             }
 
             case END_OF_GAME: {
-
+                end_game_loop(&sd, game_window, player_name);                 
                 break;
             }
 
@@ -124,6 +125,37 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
+    char buf[BUFSIZE]; 
+    int n;
+
+
+    if (game_window != NULL) {
+        delwin(game_window);
+    }
+    game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
+
+    move(1,0);
+    clrtoeol();
+
+    move(0,0);
+    clrtoeol();
+    printw("GAME OVER, waiting for new game to start");
+
+    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+    if (buf[0] == 5) {
+        parse_start_info(buf, player_name);
+        return PLAYING;
+    } else if (buf[0] == 7) {
+        // TODO: handle ping and ack it 
+    } else {
+        client_exit(game_window);
+        fprintf(stderr, "Unexpected server message\n");
+        fprintf(stderr, "msg type: %d\n", buf[0]);
+        exit(1);
+    }
+}
+
 
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     fd_set active_fd_set, read_fd_set;    
@@ -136,9 +168,18 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     move_seq = 0;
 
 
+    while(1) {
+        n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+        if (buf[0] == 5) {
+            parse_start_info(buf, player_name);
+            break;
+        }
+    }
+
     move(0,0);
     clrtoeol();
-    printw(strcat("GAME IN PROGRESS using map named: ", map_name));
+    printw("GAME IN PROGRESS using map named: ");
+    printw(map_name);
     
     move(1,0);
     clrtoeol();
@@ -191,10 +232,16 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                         update_map(buf, game_window);
                     }
                     else if (buf[0] == 6) {
-                       // TODO: handle endgame notification 
+                        return END_OF_GAME;
                     }
                     else if (buf[0] == 7) {
                         // TODO: handle responding to server ping
+                    }
+                    else if (buf[0] == 5) {
+                        client_exit(game_window);
+                        fprintf(stderr, "Game start notification interrupted an active game\n");
+                        exit(1);
+
                     }
                     else {
                         client_exit(game_window);
@@ -352,15 +399,23 @@ void registration_rq(ServerData *sd, char *player_name) {
         exit(1);
     }
 
-    // get the registration ACK to continue
-    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-    if (buf[0] == 9) {
-        parse_reg_ack(buf);
-    } else {
-        //client_exit(NULL);
-        //fprintf(stderr, "First message from server was not Registration-Ack\n");
-        //exit(1);
-        strcpy(map_name, "../maps/map2");
+    while (1) {
+        // get the registration ACK to continue
+        n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+        if (buf[0] == 9) {
+            parse_reg_ack(buf);
+            return;
+        } else if (buf[0] == 5) {
+            parse_start_info(buf, player_name);
+            return;
+        }
+        else {
+            // TODO: uncomment code below and test its behavior (reg -> reg-ack) 
+            //client_exit(NULL);
+            //fprintf(stderr, "First message from server was not Registration-Ack\n");
+            //exit(1);
+            continue;
+        }
     }
 
     // Everyone starts as a spectator
@@ -507,9 +562,7 @@ void update_map(char *buf, WINDOW *game_window) {
         }
     }
         
-    //TODO: parse buffer for any number of players
-    // offset = 21 for header + 4 for seq_no + 1 for num players
-    //          + 20 for player name
+    //TODO: test parsing buffer with multiple human players
     int minotaurx = buf[46];
     int minotaury = buf[47];
 
@@ -568,7 +621,6 @@ void parse_start_info(char *buf, char *player_name) {
         offset = 54 + (player_name_size * i);
         memcpy(curr_name, buf + offset, 20); 
         if (strcmp(curr_name, player_name) == 0) {
-            printw(curr_name);
             if (i == 0) {
                 role = MINOTAUR;    
             } else {
