@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
             }
 
             case END_OF_GAME: {
-                end_game_loop(&sd, game_window, player_name);                 
+                pstate = end_game_loop(&sd, game_window, player_name);                 
                 break;
             }
 
@@ -142,17 +142,22 @@ PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name
     clrtoeol();
     printw("GAME OVER, waiting for new game to start");
 
-    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-    if (buf[0] == 5) {
-        parse_start_info(buf, player_name);
-        return PLAYING;
-    } else if (buf[0] == 7) {
-        // TODO: handle ping and ack it 
-    } else {
-        client_exit(game_window);
-        fprintf(stderr, "Unexpected server message\n");
-        fprintf(stderr, "msg type: %d\n", buf[0]);
-        exit(1);
+    while(1) {
+        n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+        if (buf[0] == 5) {
+            parse_start_info(buf, player_name);
+            //fprintf(stderr, "GAME STARTS NOWWWWWWWWWWWWWWWWWWWWWW\n");
+            return PLAYING;
+        } else if (buf[0] == 7) {
+            // TODO: handle ping and ack it 
+        } else {
+            //client_exit(game_window);
+            fprintf(stderr, "Unexpected server message: %d\n", buf[0]);
+            //move(2,0);
+            //printw("msg type: %d\n", buf[0]);
+            //exit(1);
+
+        }
     }
 }
 
