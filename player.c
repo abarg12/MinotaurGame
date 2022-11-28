@@ -8,9 +8,9 @@ void register_move(Game game, char *buf)
     Player found_p = find_player(game, buf + PLAYER_NAME_INDEX);
     
     if (found_p != NULL) {
-        fprintf(stderr, "found player %s\n", found_p->name);
+        // fprintf(stderr, "found player %s\n", found_p->name);
         Direction d = (Direction)buf[MOVE_INSTR_INDEX];
-        print_move_direction(d);
+        // print_move_direction(d);
         
         if (d == UP || d == RIGHT || d == DOWN || d == LEFT) {
 
@@ -43,12 +43,13 @@ Player find_player(Game game, char *name)
     return NULL;
 }
 
-// registers a player in the game
+// registers a player in the game and sends a registration ACK
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
                      int *clientlen)
 {   
    Player new_p = create_new_player(game, name, clientaddr, clientlen);
    add_player_to_list(game, new_p);
+   send_player_registration_ack(game, new_p);
 }
 
 // adds a given player to list of players
@@ -78,6 +79,7 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
     strncpy(new_p->name, name, PLAYER_NAME_LEN);
 
     new_p->score = 0;
+    new_p->collided_with = false;
     new_p->last_move = -1;
 
     new_p->phys.x = START_X;

@@ -38,6 +38,10 @@ typedef enum MessageType {
     REGISTER = 0,
     EXIT     = 1,
     MOVE     = 2,
+    CURRENT_MAP = 3,
+    GAME_START_NOTIFICATION = 5,
+    END_OF_GAME_NOTIFICATION = 6,
+    REGISTRATION_ACK = 9,
 } MessageType;
 
 typedef enum ServerState {
@@ -99,10 +103,13 @@ bool is_round_over(Game game);
 
 // send messages to clients:
 void send_to_all(Game game, char *msg, int size);
+void send_to_single(Game game, Player p, char *msg, int size);
+void send_player_registration_ack(Game game, Player p);
 void send_map(Game game);
 void send_start_notification(Game game);
 void send_end_game_notifcation(Game game);
 void update_players(Game game);
 
 void add_active_players(Game game, char *j);
+void add_names_scores(Game game, char *msg);
 #endif

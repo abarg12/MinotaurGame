@@ -79,7 +79,7 @@ int main (int argc, char **argv)
             case SEND: {
                 switch(game->game_state) {
                     case LAUNCH:
-                        // fprintf(stderr, "send start notification \n");
+                        fprintf(stderr, "send start notification \n");
                         send_start_notification(game);
                         set_start_time(game);
                         game->game_state   = IN_PLAY;
@@ -93,7 +93,7 @@ int main (int argc, char **argv)
                         break;
 
                     case END_OF_GAME:
-                        // fprintf(stderr, "end of game %d notification\n",game->round);
+                        fprintf(stderr, "end of game %d notification\n",game->round);
                         game->round++;
                         send_end_game_notifcation(game);
                         
@@ -125,7 +125,7 @@ void update_players(Game game)
     while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
         game->num_active_players--;
-        fprintf(stderr, "spectating: %s\n", curr->name);
+        // fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
         i++;
 
@@ -153,17 +153,17 @@ void send_start_notification(Game game)
     Message msg = malloc(sizeof(*msg));
     assert(msg != NULL);
     
-    msg->type = 5;
+    msg->type = GAME_START_NOTIFICATION;
 
     bzero(msg->id, PLAYER_NAME_LEN);
     strcpy(msg->id, "Server");
 
     bzero(msg->data, MAX_DATA_LEN);
     strcpy(msg->data, game->map_name);
-    fprintf(stderr, "map_name %s\n", game->map_name);
+    // fprintf(stderr, "map_name %s\n", game->map_name);
     
     msg->data[MAP_NAME_LEN] = game->num_active_players;
-    fprintf(stderr, "num active players: %d\n",  msg->data[MAP_NAME_LEN]);
+    // fprintf(stderr, "num active players: %d\n",  msg->data[MAP_NAME_LEN]);
 
     // add all the active players 
     char *j = msg->data + MAP_NAME_LEN + 1; // +1 to go past num players
@@ -195,13 +195,67 @@ void send_end_game_notifcation(Game game)
 {
     Message msg = malloc(sizeof(*msg));
     assert (msg != NULL);
-    msg->type = 6;
+    msg->type = END_OF_GAME_NOTIFICATION;
     
     bzero(msg->id, PLAYER_NAME_LEN);
     memcpy(msg->id, "Server", PLAYER_NAME_LEN);
 
     bzero(msg->data, MAX_DATA_LEN);
+    msg->data[0] = game->num_active_players;
+
+    add_names_scores(game, msg->data + 1);
+
     send_to_all(game, (char*) msg, sizeof(*msg));
+}
+
+// helper function to add player names followed by their score for the
+// end of game notification
+// Player 1 name <char*> (20 bytes)
+// Player 1 score <int> (4 bytes)
+// n times, n = number of active players
+void add_names_scores(Game game, char *msg)
+{
+    int i = 0;
+    Player curr = game->active_p_head;
+    while (i < game->num_active_players)
+    {   
+        if (curr->player_state == PLAYING) {
+            // add name
+            memcpy(msg, curr->name, PLAYER_NAME_LEN);
+            
+            // add score
+            memcpy(msg + PLAYER_NAME_LEN, &curr->score, sizeof(int));
+
+            // advance pointer in message
+            msg += PLAYER_NAME_LEN + sizeof(int);
+        }
+
+        curr = curr->next;
+
+        // loop back around
+        if (curr == NULL) {
+            curr = game->players_head;
+        }
+        i++;
+    }
+}
+
+// send the player a registration ack after they've been added to the
+// players list.
+void send_player_registration_ack(Game game, Player p)
+{
+    Message msg = malloc(sizeof(*msg));
+    assert (msg != NULL);
+    
+    msg->type = REGISTRATION_ACK;
+
+    bzero(msg->id, PLAYER_NAME_LEN);
+    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
+
+    bzero(msg->data, MAX_DATA_LEN);
+    memcpy(msg->data, game->map_name, MAP_NAME_LEN);
+
+    send_to_single(game, p, (char*) msg, sizeof(*msg));
 }
 
 // sends the updated coordinates to all the registered players
@@ -209,7 +263,7 @@ void send_map(Game game)
 {
     Message msg = malloc(sizeof(*msg));
     assert (msg != NULL);
-    msg->type = 3;
+    msg->type = CURRENT_MAP;
     
     bzero(msg->id, PLAYER_NAME_LEN);
     strcpy(msg->id, "Server");
@@ -238,13 +292,23 @@ void send_to_all(Game game, char *msg, int size)
     }
 }
 
+// sends a message of size bytes to player p.
+void send_to_single(Game game, Player p, char *msg, int size)
+{
+    int bytes = sendto(game->sockfd, msg, size, 0, 
+                      (struct sockaddr *) p->player_addr, 
+                       p->addr_len);
+    if (bytes < 0)
+        fprintf(stderr, "ERROR in sendto: %d\n", bytes);
+}
+
 void reset_timeout(Game game)
 {
-    // game->timeout->tv_sec = 0;
-    game->timeout->tv_sec = 1;
+    game->timeout->tv_sec = 0;
+    // game->timeout->tv_sec = 1;
     // 500,000 microseconds = 0.5 seconds
-    // game->timeout->tv_usec = 150000;
-    game->timeout->tv_usec = 0;
+    game->timeout->tv_usec = 250000;
+    // game->timeout->tv_usec = 0;
 }
 
 // will change states using select()
@@ -325,7 +389,7 @@ void print_game_state(Game game)
             break;
 
     }
-    fprintf(stderr, "Game State: %s\n", game_state);
+    // fprintf(stderr, "Game State: %s\n", game_state);
 }
 
 // determines if the game can start based on the number of registered players
@@ -350,7 +414,7 @@ void start_game(Game game)
 
              }
              game->num_active_players++;
-             fprintf(stderr, "playing: %s\n", curr->name);
+            //  fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;
 

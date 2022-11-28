@@ -90,11 +90,11 @@ void update(Game g) {
         curr_player = curr_player->next;
     }
 
-    int i;
-    for (i = 0; i < msg_size; i++) {
-        fprintf(stderr, "%c", msg[i]);
-    }
-    fprintf(stderr, "\n");
+    // int i;
+    // for (i = 0; i < msg_size; i++) {
+    //     fprintf(stderr, "%c", msg[i]);
+    // }
+    // fprintf(stderr, "\n");
     g->update_to_send = msg;
 }
 
@@ -107,7 +107,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             p = p->next;
             continue;
         }
-        fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
+        // fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
         old_coords[n].d = p->phys.d;
@@ -119,7 +119,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     int i, x, y;
-    fprintf(stderr, "active players: %d\n", g->num_active_players);
+    // fprintf(stderr, "active players: %d\n", g->num_active_players);
     for (i = 0; i < g->num_active_players; i++) {
         // have to split up cases since up/down is only a move by one 
         if (old_coords[i].d == UP || old_coords[i].d == DOWN) {
@@ -177,8 +177,8 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
-    fprintf(stderr, "checking for wall on coordinates: %d   ", x);
-    fprintf(stderr, "%d\n", y);
+    // fprintf(stderr, "checking for wall on coordinates: %d   ", x);
+    // fprintf(stderr, "%d\n", y);
     if ((g->map)[n] == '1') {
          return true; 
     }

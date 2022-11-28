@@ -138,7 +138,9 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
 
     move(0,0);
     clrtoeol();
-    printw(strcat("GAME IN PROGRESS using map named: ", map_name));
+    // if (map_name != NULL) {
+    //     printw(strcat("GAME IN PROGRESS using map named: ", map_name));
+    // }
     
     move(1,0);
     clrtoeol();
@@ -386,9 +388,9 @@ void client_exit(WINDOW *game_window) {
 void download_map() {
     char file_location[60];
     bzero(file_location, 60);
-    strcat(file_location, "../");
+    // strcat(file_location, "../");
     strcat(file_location, map_name);
-    printf(file_location);
+    fprintf(stderr, "file location: \n%s\n", file_location);
     FILE *fptr = fopen(file_location, "rb");
     if (fptr == NULL) {
         fprintf(stderr, "Map does not exist at specified location in files\n");

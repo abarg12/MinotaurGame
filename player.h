@@ -33,6 +33,7 @@ typedef struct Player {
     struct sockaddr_in *player_addr;
     int last_move; // prevents server from executing an out of order move
     int score;
+    bool collided_with;
     struct Player *next;
 } *Player;
 
