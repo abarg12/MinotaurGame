@@ -33,6 +33,7 @@ void send_exit_msg(ServerData *sd, char *player_name);
 void print_buffer(char *buf, int n);
 void parse_start_info(char *buf, char *player_name);
 void parse_reg_ack(char *buf);
+void ack_ping(ServerData *sd, char *player_name);
 
 char *map_name;
 char *map;
@@ -157,7 +158,7 @@ PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name
             //fprintf(stderr, "GAME STARTS NOWWWWWWWWWWWWWWWWWWWWWW\n");
             return PLAYING;
         } else if (buf[0] == 7) {
-            // TODO: handle ping and ack it 
+            ack_ping(sd, player_name); 
         } else {
             //client_exit(game_window);
             fprintf(stderr, "Unexpected server message: %d\n", buf[0]);
@@ -177,7 +178,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     FD_SET(sd->sockfd, &active_fd_set);
     char buf[BUFSIZE];
     bzero(buf, BUFSIZE);
-    int n;
+    int n, seconds;
     move_seq = 0;
 
 
@@ -227,8 +228,8 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                     // exit when parse int returns -1
                     if (parse_instr(sd, player_name) < 0) {
                         client_exit(game_window);
-                        fprintf(stderr, "failed on stdin read\n");
-                        exit(1);
+                        fprintf(stderr, "------  client graceful exit  ------\n");
+                        exit(0);
                     }
                 }
                 else {
@@ -241,7 +242,8 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                         return END_OF_GAME;
                     }
                     else if (buf[0] == 7) {
-                        // TODO: handle responding to server ping
+                        seconds = buf[21];
+                        ack_ping(sd, player_name);
                     }
                     else if (buf[0] == 5) {
                         client_exit(game_window);
@@ -374,6 +376,7 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
 
     if (c == (int) 'q') {
         client_exit(game_window);
+        fprintf(stderr, "------  client graceful exit  ------\n");
         exit(0);
     } else {
         mvwprintw(game_window, 6, 3, "Sending request to join game server");
@@ -392,7 +395,7 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 parse_start_info(buf, player_name);
                 break;
             } else if (buf[0] == 7) {
-                // TODO: ack a ping
+                ack_ping(sd, player_name);
                 break;
             } else {
                 break;
@@ -637,3 +640,17 @@ void parse_reg_ack(char *buf) {
 }
 
 
+void ack_ping(ServerData *sd, char *player_name) {
+    char ack[21];
+    ack[0] = 8;
+    memcpy(ack + 1, player_name, 20); 
+
+
+    int n;
+    n = sendto(sd->sockfd, ack, 21, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
+    if (n < 0) {
+        client_exit(NULL);
+        fprintf(stderr, "sendto error for ping ack\n");
+        exit(1);
+    }   
+}
