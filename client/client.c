@@ -10,6 +10,7 @@
 #include <sys/types.h>
 #include <netdb.h> 
 #include <errno.h>
+#include <signal.h>
 #include "client.h"
 
 #define BUFSIZE 533
@@ -38,12 +39,18 @@ char *map;
 int move_seq;
 enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
 
+void intHandler(int signal) {
+    client_exit(NULL);
+    fprintf(stderr, "/\\/\\/\\/\\  client ungraceful exit  /\\/\\/\\/\\\n");
+    exit(0);
+}
+
 int main(int argc, char **argv) {
     ServerData sd;
     char buf[BUFSIZE];
     char *player_name = malloc(20);
     map_name = malloc(32);
-
+    
    
     if (argc == 1) {
         sd.hostname = "comp112-05.cs.tufts.edu";
@@ -80,6 +87,7 @@ int main(int argc, char **argv) {
 
     // start ncurses mode
     initscr();
+    signal(SIGINT, intHandler);
     curs_set(2);
     refresh();
     WINDOW *game_window = NULL;
@@ -173,13 +181,6 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     move_seq = 0;
 
 
-    while(1) {
-        n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-        if (buf[0] == 5) {
-            parse_start_info(buf, player_name);
-            break;
-        }
-    }
 
     move(0,0);
     clrtoeol();
@@ -380,6 +381,24 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         wrefresh(game_window);
         registration_rq(sd, player_name);
         delwin(game_window);
+
+        
+        int n;
+        char buf[BUFSIZE];
+        while(1) {
+           n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+
+            if (buf[0] == 5) {
+                parse_start_info(buf, player_name);
+                break;
+            } else if (buf[0] == 7) {
+                // TODO: ack a ping
+                break;
+            } else {
+                break;
+            }
+        }
+
         return PLAYING;
     }
     
@@ -410,16 +429,17 @@ void registration_rq(ServerData *sd, char *player_name) {
         if (buf[0] == 9) {
             parse_reg_ack(buf);
             return;
-        } else if (buf[0] == 5) {
-            parse_start_info(buf, player_name);
-            return;
-        }
+        } 
+       // else if (buf[0] == 5) {
+       //     parse_start_info(buf, player_name);
+       //     return;
+       // }
         else {
             // TODO: uncomment code below and test its behavior (reg -> reg-ack) 
-            //client_exit(NULL);
-            //fprintf(stderr, "First message from server was not Registration-Ack\n");
-            //exit(1);
-            continue;
+            client_exit(NULL);
+            fprintf(stderr, "First message from server was not Registration-Ack\n");
+            exit(1);
+            //continue;
         }
     }
 
@@ -514,30 +534,13 @@ void print_buffer(char *buf, int n) {
     msg_struct = (InstrStruct *) buf;
 
 
-    //if (msg_struct->type == 3 || msg_struct->type == 5) {
     printw("Msg type: %d  ", msg_struct->type);
     printw("Name: %s  ", msg_struct->ID);
-    //printw("Data: %s  ", msg_struct->DATA);
     printw("Data: ");
     int data_len = n;
     for (i = 26; i < data_len; i++) {
          printw("%c", buf[i]);
     }
-
-
-    //} else {
-   
-/*
-    for (i = 0; i < 73; i++) {
-        char val = buf[i];
-        if (val != '\0') {
-            addch(val);
-        }
-    }
-    
-    }
-
- */   
 
     refresh();
 }
@@ -606,17 +609,6 @@ void parse_start_info(char *buf, char *player_name) {
     int num_active_players = buf[53];
 
     memcpy(map_name, buf + 21, 32);
-
-    /*
-    int j;
-    for (j = 0; j < 533; j++) {
-        if (buf[j] == '\0') {
-            fprintf(stderr, "0");
-        }
-        else {
-            fprintf(stderr, "%c", buf[j]);
-        }
-    }*/
 
     role = SPECTATOR;
 
