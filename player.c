@@ -152,10 +152,12 @@ void remove_player(Game game, char *name)
                     game->players_head = curr->next;
                 } else if (curr == game->players_tail) {
                     game->players_tail = prev;
+                    game->players_tail->next = NULL;
                 } else {
                     prev->next = curr->next;
                 }
                 free(curr);
+                curr = NULL;
                 break;
             }
             prev = curr;
