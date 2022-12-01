@@ -429,6 +429,7 @@ void registration_rq(ServerData *sd, char *player_name) {
     while (1) {
         // get the registration ACK to continue
         n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+        
         if (buf[0] == 9) {
             parse_reg_ack(buf);
             return;
@@ -444,6 +445,7 @@ void registration_rq(ServerData *sd, char *player_name) {
             exit(1);
             //continue;
         }
+        
     }
 
     // Everyone starts as a spectator
