@@ -91,15 +91,50 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
     new_p->addr_len   = *clientlen;
     new_p->player_addr = clientaddr;
 
+    new_p->unacked = 0;
     new_p->next = NULL;
 
     return new_p;
+}
+
+// for all clients, increment their unacked counter by one.
+void incr_ping_tracker(Game game)
+{   
+    Player curr = game->players_head;
+    while (curr != NULL) {
+        curr->unacked++;
+        curr = curr->next;
+    }
+}
+
+// todo: should the ACK have an ID for it to actually BE cumulative?
+// b/c receiving a super old ack shouldn't count...
+// for a given client, reset the unacked counter to 0 (we are using cumulating acks for ping) when (todo: most recent) ACK is received.
+void reset_unacked(Game game, char *name)
+{
+    Player found_p = find_player(game, name);
+    if (found_p != NULL) {
+        found_p->unacked = 0;
+    }
+}
+
+void remove_idle_players(Game game)
+{
+    Player curr = game->players_head;
+    while (curr != NULL)
+    {   
+        if (curr->unacked == MAX_UNACKED) {
+            remove_player(game, curr->name);
+        }
+        curr = curr->next;
+    }
 }
 
 // remove a player based on the name
 void remove_player(Game game, char *name)
 {
     Player found_p = find_player(game, name);
+
     if (found_p != NULL) {
         fprintf(stderr, "removing player %s\n", name );
         

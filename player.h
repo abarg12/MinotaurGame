@@ -16,6 +16,7 @@
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
 #define PLAYER_NAME_LEN 20
+#define MAX_UNACKED 3
 
 // typedef struct Game *Game;
 
@@ -34,6 +35,7 @@ typedef struct Player {
     int last_move; // prevents server from executing an out of order move
     int score;
     bool collided_with;
+    int unacked; // tracks how many PINGS have not been ACK'd by player
     struct Player *next;
 } *Player;
 
@@ -42,11 +44,14 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
 void add_player_to_list(Game game, Player p);
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
                      int *clientlen);
+void remove_idle_players(Game game);
 Player find_player(Game game, char *name);
 void register_move(Game game, char *buf);
 void print_players(Game game);
 void remove_player(Game game, char *name);
 void clear_all_players(Game game);
 void print_move_direction(Direction d);
+void incr_ping_tracker(Game game);
+void reset_unacked(Game game, char *name);
 
 #endif

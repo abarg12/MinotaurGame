@@ -241,7 +241,7 @@ void add_names_scores(Game game, char *msg)
 }
 
 // send the player a registration ack after they've been added to the
-// players list.
+// players list, which includes the map currently being used.
 void send_player_registration_ack(Game game, Player p)
 {
     Message msg = malloc(sizeof(*msg));
@@ -272,8 +272,26 @@ void send_map(Game game)
     int data_size = 4 + 1 + game->num_active_players * 22;
    
     memcpy(msg->data, game->update_to_send, data_size);
-    // TODO: change so not hardcoded value 21 for header size: 21 + msg_size
+
     send_to_all(game, (char*) msg, sizeof(*msg)); 
+}
+
+// send a ping message to all the registered clients to see if they're still
+// playing the game, and include the time remaining in the game so the client 
+// can display it to the user.
+void send_ping(Game game)
+{
+    Message msg = malloc(sizeof(*msg));
+    assert (msg != NULL);
+    msg->type = PING;
+
+    bzero(msg->id, PLAYER_NAME_LEN);
+    strcpy(msg->id, "Server");
+
+    bzero(msg->data, MAX_DATA_LEN);
+    msg->data[0] = 5; // todo: update with real time remaining
+
+    send_to_all(game, (char*) msg, sizeof(*msg));
 }
 
 // helper function to send a message to all registered players
@@ -302,13 +320,23 @@ void send_to_single(Game game, Player p, char *msg, int size)
         fprintf(stderr, "ERROR in sendto: %d\n", bytes);
 }
 
+// 1,000,000 microseconds = 1 second
+// 500,000   microseconds = 0.5 seconds
 void reset_timeout(Game game)
 {
     game->timeout->tv_sec = 0;
-    // game->timeout->tv_sec = 1;
-    // 500,000 microseconds = 0.5 seconds
     game->timeout->tv_usec = 250000;
-    // game->timeout->tv_usec = 0;
+}
+
+void ping(Game game)
+{
+    game->ping_counter++;
+
+    if (game->ping_counter == game->ping_threshold) {
+        remove_idle_players(game);
+        send_ping(game);
+        incr_ping_tracker(game);
+    }
 }
 
 // will change states using select()
@@ -335,6 +363,7 @@ bool receive_data(Game game)
 
     if (game->timeout->tv_usec == 0) {
         reset_timeout(game);
+        ping(game);
         return true;
     }
 
@@ -361,6 +390,10 @@ bool receive_data(Game game)
         }
         case MOVE: {
             register_move(game, buf);
+            break;
+        }
+        case PING_ACK: {
+            reset_unacked(game, buf + PLAYER_NAME_INDEX);
             break;
         }
     }
@@ -465,9 +498,10 @@ void initialize_game(Game game, int sockfd, char *file_name)
     // timeout
     game->timeout = malloc(sizeof(struct timeval));
     assert(game->timeout != NULL);
-    // game->timeout->tv_sec = 1;
-    // game->timeout->tv_usec = 0;
     reset_timeout(game);
+
+    game->ping_counter = 0;
+    game->ping_threshold = 1000000 / game->timeout->tv_usec;
 
     load_map(file_name, game);
 }

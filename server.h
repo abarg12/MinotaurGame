@@ -13,7 +13,6 @@
 #include <time.h>
 #include <inttypes.h>
 
-
 #include "player.h"
 #include "game_logic.h"
 
@@ -32,7 +31,7 @@ typedef struct Player *Player;
 #define PLAYER_NAME_LEN 20
 #define BILLION 1000000000L
 
-int ROUND_TIME; //20 // todo change: n seconds
+int ROUND_TIME;
 
 typedef enum MessageType {
     REGISTER = 0,
@@ -41,6 +40,8 @@ typedef enum MessageType {
     CURRENT_MAP = 3,
     GAME_START_NOTIFICATION = 5,
     END_OF_GAME_NOTIFICATION = 6,
+    PING = 7,
+    PING_ACK = 8,
     REGISTRATION_ACK = 9,
 } MessageType;
 
@@ -72,6 +73,8 @@ typedef struct Game {
     char        *update_to_send; // for current map to send, sam to free it
                                  // to memcpy into the message data field
     int         round;
+    int         ping_counter;
+    int         ping_threshold;
     struct timespec *start_time;
     struct timeval *timeout;
 } *Game;
@@ -106,9 +109,12 @@ void send_to_all(Game game, char *msg, int size);
 void send_to_single(Game game, Player p, char *msg, int size);
 void send_player_registration_ack(Game game, Player p);
 void send_map(Game game);
+void send_ping(Game game);
 void send_start_notification(Game game);
 void send_end_game_notifcation(Game game);
 void update_players(Game game);
+
+void ping(Game game);
 
 void add_active_players(Game game, char *j);
 void add_names_scores(Game game, char *msg);
