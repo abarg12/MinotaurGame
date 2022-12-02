@@ -15,14 +15,14 @@ int main (int argc, char **argv)
 	struct hostent *hostp; /* client host info */
 	struct timeval *t = NULL;
 
-	if (argc != 3) {
-		fprintf(stderr, "usage: %s <round time> <file name>\n", argv[0]);
+	if (argc != 4) {
+		fprintf(stderr, "usage: %s <port number> <round time> <file name>\n", argv[0]);
 		exit(1);
 	}
-	portno = 9040;
-    ROUND_TIME = atoi(argv[1]);
+	portno = atoi(argv[1]);
+    ROUND_TIME = atoi(argv[2]);
     char map_name[MAP_NAME_LEN];
-    strcpy(map_name, argv[2]);
+    strcpy(map_name, argv[3]);
 
 	/* socket: create the parent socket */
 	sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -124,6 +124,7 @@ void update_players(Game game)
     int i = 0;
     while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
+        curr->last_move = -1; 
         game->num_active_players--;
         // fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
@@ -316,6 +317,7 @@ void send_to_single(Game game, Player p, char *msg, int size)
     int bytes = sendto(game->sockfd, msg, size, 0, 
                       (struct sockaddr *) p->player_addr, 
                        p->addr_len);
+
     if (bytes < 0)
         fprintf(stderr, "ERROR in sendto: %d\n", bytes);
 }
@@ -336,6 +338,7 @@ void ping(Game game)
         remove_idle_players(game);
         send_ping(game);
         incr_ping_tracker(game);
+        game->ping_counter = 0;
     }
 }
 
@@ -500,6 +503,7 @@ void initialize_game(Game game, int sockfd, char *file_name)
     assert(game->timeout != NULL);
     reset_timeout(game);
 
+    // ping
     game->ping_counter = 0;
     game->ping_threshold = 1000000 / game->timeout->tv_usec;
 

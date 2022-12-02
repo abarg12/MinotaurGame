@@ -44,6 +44,7 @@ Player create_new_player(Game game, char *name, struct sockaddr_in *clientaddr,
 void add_player_to_list(Game game, Player p);
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
                      int *clientlen);
+Player find_idle_players(Game game);
 void remove_idle_players(Game game);
 Player find_player(Game game, char *name);
 void register_move(Game game, char *buf);
