@@ -424,7 +424,8 @@ void print_game_state(Game game)
             break;
 
     }
-    // fprintf(stderr, "Game State: %s\n", game_state);
+    fprintf(stderr, "Game State: %s\nActive players: %d\n", 
+            game_state, game->num_active_players);
 }
 
 // determines if the game can start based on the number of registered players
@@ -434,7 +435,7 @@ void start_game(Game game)
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
         Player curr = game->active_p_head;
-        int i = 0;
+        int i = game->num_active_players;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
              if (i == 0) {
