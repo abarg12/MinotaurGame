@@ -417,6 +417,11 @@ void registration_rq(ServerData *sd, char *player_name) {
     rrq[0] = 0;
     memcpy(rrq + 1, player_name, 20); 
 
+    
+    // Everyone starts as a spectator
+    role = SPECTATOR;
+
+
     // send the registration req message
     n = sendto(sd->sockfd, rrq, 21, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
     if (n < 0) {
@@ -446,9 +451,6 @@ void registration_rq(ServerData *sd, char *player_name) {
         }
         
     }
-
-    // Everyone starts as a spectator
-    role = SPECTATOR;
 
     return;
 }
