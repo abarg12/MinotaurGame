@@ -18,6 +18,7 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 // return 1 if there's a wall, else 0
 int check_if_wall(Game g, int x, int y);
+int check_player_overlap(Game g, Player curr_p);        
 
 void load_map(char *file_name, Game g) {
     FILE *fptr = fopen(file_name, "rb");
@@ -73,11 +74,26 @@ void update(Game g) {
             continue;     
         }
         
-            //TODO: check for collisions between player characters
 
+            //TODO: check for collisions between player characters
+            /////////////////// begin Construction ZONE
+
+
+        //check_player_overlap(g, curr_player);        
+
+
+
+
+            /////////////////////// end of construction zone
+            
+            
         curr_player->phys.x = new_coords[player_number].x;
         curr_player->phys.y = new_coords[player_number].y;
         curr_player->phys.d = new_coords[player_number].d;
+
+        /*fprintf(stderr, "player %s", curr_player->name);
+        fprintf(stderr, " is moving %d", curr_player->phys.d);
+        fprintf(stderr, " updating loc to %d %d\n", curr_player->phys.x, curr_player->phys.y);*/
 
         memcpy(msg + buf_pos, curr_player->name, PLAYER_NAME_LEN);
         buf_pos = buf_pos + PLAYER_NAME_LEN;
@@ -185,3 +201,6 @@ int check_if_wall(Game g, int x, int y) {
     return false;
 }
 
+int check_player_overlap(Game g, Player curr_p) {
+    return 0;
+}
