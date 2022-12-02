@@ -396,7 +396,6 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                 break;
             } else if (buf[0] == 7) {
                 ack_ping(sd, player_name);
-                break;
             } else {
                 break;
             }
@@ -429,6 +428,7 @@ void registration_rq(ServerData *sd, char *player_name) {
     while (1) {
         // get the registration ACK to continue
         n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+        
         if (buf[0] == 9) {
             parse_reg_ack(buf);
             return;
@@ -444,6 +444,7 @@ void registration_rq(ServerData *sd, char *player_name) {
             exit(1);
             //continue;
         }
+        
     }
 
     // Everyone starts as a spectator
@@ -644,7 +645,6 @@ void ack_ping(ServerData *sd, char *player_name) {
     char ack[21];
     ack[0] = 8;
     memcpy(ack + 1, player_name, 20); 
-
 
     int n;
     n = sendto(sd->sockfd, ack, 21, 0, (struct sockaddr *) &(sd->serveraddr), sizeof(sd->serveraddr));
