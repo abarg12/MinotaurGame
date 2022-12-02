@@ -87,7 +87,6 @@ int main (int argc, char **argv)
                         break;
 
                     case IN_PLAY:
-                        // fprintf(stderr, "sending map\n");
                         send_map(game);
                         game->server_state = RECEIVE;
                         break;
@@ -218,7 +217,7 @@ void add_names_scores(Game game, char *msg)
 {
     int i = 0;
     Player curr = game->active_p_head;
-    while (i < game->num_active_players)
+    while (curr != NULL && i < game->num_active_players)
     {   
         if (curr->player_state == PLAYING) {
             // add name
@@ -425,7 +424,8 @@ void print_game_state(Game game)
             break;
 
     }
-    // fprintf(stderr, "Game State: %s\n", game_state);
+    fprintf(stderr, "Game State: %s\nActive players: %d\n", 
+            game_state, game->num_active_players);
 }
 
 // determines if the game can start based on the number of registered players
@@ -435,7 +435,7 @@ void start_game(Game game)
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
         Player curr = game->active_p_head;
-        int i = 0;
+        int i = game->num_active_players;
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
              if (i == 0) {
@@ -447,7 +447,6 @@ void start_game(Game game)
                 curr->phys.x = 6;
                 curr->phys.y = 3;
                 curr->phys.d = UP;
-
              }
              game->num_active_players++;
             //  fprintf(stderr, "playing: %s\n", curr->name);

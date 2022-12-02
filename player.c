@@ -131,11 +131,20 @@ Player find_idle_players(Game game)
     return NULL;
 }
 
+// remove all idle players and handle case where players get disconnected
+// mid-game by stopping the game.
 void remove_idle_players(Game game)
 {
     Player found_p = NULL;
     while ((found_p = find_idle_players(game)) != NULL) {
         remove_player(game, found_p->name);
+    }
+
+    if (game->game_state == IN_PLAY && 
+        game->num_active_players < MAX_ACTIVE_PLAYERS) 
+    {
+        game->game_state = END_OF_GAME;
+        game->server_state = SEND;
     }
 }
 
