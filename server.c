@@ -87,7 +87,6 @@ int main (int argc, char **argv)
                         break;
 
                     case IN_PLAY:
-                        // fprintf(stderr, "sending map\n");
                         send_map(game);
                         game->server_state = RECEIVE;
                         break;
@@ -447,7 +446,6 @@ void start_game(Game game)
                 curr->phys.x = 6;
                 curr->phys.y = 3;
                 curr->phys.d = UP;
-
              }
              game->num_active_players++;
             //  fprintf(stderr, "playing: %s\n", curr->name);
