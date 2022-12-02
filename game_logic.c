@@ -123,6 +123,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             p = p->next;
             continue;
         }
+        assert(p->phys.x > 0 && p->phys.x < MWIDTH && p->phys.y > 0 && p->phys.y < MHEIGHT);
         // fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
@@ -135,7 +136,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     int i, x, y;
-    fprintf(stderr, "active players: %d\n", g->num_active_players);
+    //fprintf(stderr, "active players: %d\n", g->num_active_players);
     for (i = 0; i < g->num_active_players; i++) {
         // have to split up cases since up/down is only a move by one 
         if (old_coords[i].d == UP || old_coords[i].d == DOWN) {
@@ -146,7 +147,7 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
                x = old_coords[i].x;
                y = old_coords[i].y + 1;  
             }
-        
+
             // double wall check to allow for bigger player characters
             if (check_if_wall(g, x, y) || check_if_wall(g, x + 1, y)) {
                 new_coords[i].x = old_coords[i].x;
@@ -193,8 +194,7 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
-    // fprintf(stderr, "checking for wall on coordinates: %d   ", x);
-    // fprintf(stderr, "%d\n", y);
+
     if ((g->map)[n] == '1') {
          return true; 
     }
