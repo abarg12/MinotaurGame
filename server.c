@@ -217,7 +217,7 @@ void add_names_scores(Game game, char *msg)
 {
     int i = 0;
     Player curr = game->active_p_head;
-    while (i < game->num_active_players)
+    while (curr != NULL && i < game->num_active_players)
     {   
         if (curr->player_state == PLAYING) {
             // add name
