@@ -118,15 +118,24 @@ void reset_unacked(Game game, char *name)
     }
 }
 
-void remove_idle_players(Game game)
+Player find_idle_players(Game game)
 {
     Player curr = game->players_head;
-    while (curr != NULL)
-    {   
+    while (curr != NULL) {   
         if (curr->unacked == MAX_UNACKED) {
-            remove_player(game, curr->name);
+            fprintf(stderr, "removing idle player: %s\n", curr->name);
+            return curr;
         }
         curr = curr->next;
+    }
+    return NULL;
+}
+
+void remove_idle_players(Game game)
+{
+    Player found_p = NULL;
+    while ((found_p = find_idle_players(game)) != NULL) {
+        remove_player(game, found_p->name);
     }
 }
 

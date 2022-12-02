@@ -124,6 +124,7 @@ void update_players(Game game)
     int i = 0;
     while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
+        curr->last_move = -1; 
         game->num_active_players--;
         // fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
@@ -316,8 +317,6 @@ void send_to_single(Game game, Player p, char *msg, int size)
     int bytes = sendto(game->sockfd, msg, size, 0, 
                       (struct sockaddr *) p->player_addr, 
                        p->addr_len);
-    
-    fprintf(stderr, "send to single: %d, %s, %s\n", msg[0], (msg + 1), msg + 21);
 
     if (bytes < 0)
         fprintf(stderr, "ERROR in sendto: %d\n", bytes);
@@ -339,6 +338,7 @@ void ping(Game game)
         remove_idle_players(game);
         send_ping(game);
         incr_ping_tracker(game);
+        game->ping_counter = 0;
     }
 }
 
