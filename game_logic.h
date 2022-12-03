@@ -42,4 +42,7 @@ void load_map(char *file_name, Game g);
 // data for Message 3 from the spec gets written into the game struct 
 void update(Game g);
 
+// calculate player scores at the end of the game and store value in Player->score
+void calculate_scores(Game g); 
+
 #endif

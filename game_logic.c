@@ -20,6 +20,11 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 int check_if_wall(Game g, int x, int y);
 int check_player_overlap(Game g, Player curr_p);        
 
+
+void calculate_scores(Game g) {
+
+}
+
 void load_map(char *file_name, Game g) {
     FILE *fptr = fopen(file_name, "rb");
     if (fptr == NULL) {
@@ -78,6 +83,10 @@ void update(Game g) {
             //TODO: check for collisions between player characters
             /////////////////// begin Construction ZONE
 
+
+
+        // TODO: get the minotaur as g->active_p_head to update
+        //       the score when they get a player
 
         //check_player_overlap(g, curr_player);        
 
