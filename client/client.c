@@ -135,8 +135,13 @@ int main(int argc, char **argv) {
 }
 
 PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
-    char buf[BUFSIZE]; 
-    int n;
+    fd_set active_fd_set, read_fd_set;    
+    FD_ZERO(&active_fd_set);
+    FD_SET(0, &active_fd_set);
+    FD_SET(sd->sockfd, &active_fd_set);
+    char buf[BUFSIZE];
+    bzero(buf, BUFSIZE);
+    int n, seconds;
 
 
     if (game_window != NULL) {
@@ -144,28 +149,67 @@ PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name
     }
     game_window = newwin(GHEIGHT, GWIDTH, 3, 0);
 
-    move(1,0);
+    move(0,0);
     clrtoeol();
 
-    move(0,0);
+    move(1,0);
     clrtoeol();
     printw("GAME OVER, waiting for new game to start");
 
-    while(1) {
-        n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
-        if (buf[0] == 5) {
-            parse_start_info(buf, player_name);
-            //fprintf(stderr, "GAME STARTS NOWWWWWWWWWWWWWWWWWWWWWW\n");
-            return PLAYING;
-        } else if (buf[0] == 7) {
-            ack_ping(sd, player_name); 
-        } else {
-            //client_exit(game_window);
-            fprintf(stderr, "Unexpected server message: %d\n", buf[0]);
-            //move(2,0);
-            //printw("msg type: %d\n", buf[0]);
-            //exit(1);
+    move(2,0);
+    clrtoeol();
+    printw("Press q to quit");
 
+    wrefresh(game_window);
+    refresh();
+
+    while(1) {
+        read_fd_set = active_fd_set;
+        
+        // The game select loop blocks until user input or map is received
+        if (select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL) < 0) {
+            if (errno == 4) {
+                continue;
+            }
+            client_exit(game_window);
+            exit(1);
+        }
+    
+        int i;
+        for (i = 0; i < FD_SETSIZE; i++) {
+
+            if (FD_ISSET (i, &read_fd_set)) {
+                if (i == 0) {
+                    // parse the key sent by user 
+                    char instr[50];
+                    int len = read(0, instr, 50);
+                    char key = instr[len - 1]; 
+
+                    if (key == 27 || key == 113) {
+                        send_exit_msg(sd, player_name);
+                        client_exit(game_window);
+                        fprintf(stderr, "------  client graceful exit  ------\n");
+                        exit(0);
+                    }
+                }
+                else {
+                    // interpret messages from server 
+                    n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+                    if (buf[0] == 7) {
+                        seconds = buf[21];
+                        ack_ping(sd, player_name);
+                    }
+                    else if (buf[0] == 5) {
+                        parse_start_info(buf, player_name);
+                        return PLAYING;
+                    }
+                    else {
+                        client_exit(game_window);
+                        fprintf(stderr, "error due to message type set as: %d while in end of game mode\n", buf[0]);
+                        exit(1);
+                    }
+                }
+            }
         }
     }
 }
@@ -180,8 +224,6 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     bzero(buf, BUFSIZE);
     int n, seconds;
     move_seq = 0;
-
-
 
     move(0,0);
     clrtoeol();
