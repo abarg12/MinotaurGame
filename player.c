@@ -174,6 +174,17 @@ void remove_player(Game game, char *name)
                 } else {
                     prev->next = curr->next;
                 }
+
+                // update the active_p_head pointer
+                Player aph = game->active_p_head;
+                if (curr == aph) {
+                    if (aph->next != NULL) {
+                        game->active_p_head = aph->next;
+                    } else {
+                        game->active_p_head = game->players_head;
+                    }
+                }
+
                 free(curr);
                 curr = NULL;
                 break;

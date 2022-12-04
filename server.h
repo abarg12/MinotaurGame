@@ -103,6 +103,7 @@ void set_start_time(Game game);
 int64_t get_current_time();
 int64_t time_in_billion(Game game);
 bool is_round_over(Game game);
+int time_remaining(Game game);
 
 // send messages to clients:
 void send_to_all(Game game, char *msg, int size);

@@ -290,10 +290,24 @@ void send_ping(Game game)
     bzero(msg->id, PLAYER_NAME_LEN);
     strcpy(msg->id, "Server");
 
+    int t;
+    if (game->game_state == IN_PLAY) {
+        t = time_remaining(game);
+    } else {
+        t = -1;
+    }
+    fprintf(stderr, "time remaining: %d\n", t);
+
     bzero(msg->data, MAX_DATA_LEN);
-    msg->data[0] = 5; // todo: update with real time remaining
+    msg->data[0] = t;
 
     send_to_all(game, (char*) msg, sizeof(*msg));
+}
+
+// returns the number of seconds remaining in a round in seconds
+int time_remaining(Game game)
+{
+    return ROUND_TIME - (get_current_time() - time_in_billion(game)) / BILLION;
 }
 
 // helper function to send a message to all registered players
