@@ -49,7 +49,7 @@ int main (int argc, char **argv)
     // while(i < 40) {
     while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
-        print_game_state(game);
+        // print_game_state(game);
 
         switch(game->server_state) {
             case RECEIVE: {
@@ -94,6 +94,7 @@ int main (int argc, char **argv)
                     case END_OF_GAME:
                         fprintf(stderr, "end of game %d notification\n",game->round);
                         game->round++;
+                        calculate_scores(game);
                         send_end_game_notifcation(game);
                         
                         // next round setup
@@ -125,6 +126,7 @@ void update_players(Game game)
         curr->player_state = SPECTATING;
         curr->last_move = -1; 
         game->num_active_players--;
+        curr->collided_with = false;
         // fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
         i++;
