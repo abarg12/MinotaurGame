@@ -193,7 +193,9 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
-
+    
+    assert(g->map != NULL);
+    fprintf(stderr, "%c\n", (g->map)[n]);
     if ((g->map)[n] == '1') {
          return true; 
     }
