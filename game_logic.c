@@ -123,7 +123,8 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             continue;
         }
         assert(p->phys.x > 0 && p->phys.x < MWIDTH && p->phys.y > 0 && p->phys.y < MHEIGHT);
-        // fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
+        assert(p->phys.d >= 0 && p->phys.d < 4);
+        //fprintf(stderr, "player location: %d %d %d\n", p->phys.x, p->phys.y, p->phys.d);
         old_coords[n].x = p->phys.x; 
         old_coords[n].y = p->phys.y;
         old_coords[n].d = p->phys.d;
@@ -136,6 +137,10 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     int i, x, y;
     //fprintf(stderr, "active players: %d\n", g->num_active_players);
+    //fprintf(stderr, "head: %s\n", g->active_p_head->name);
+    //fprintf(stderr, "active head: %s\n", g->players_head->name);
+    //fprintf(stderr, "active head neighbor: %s\n", g->active_p_head->next->name);
+    //fprintf(stderr, "tail: %s\n", g->players_tail->name);
     for (i = 0; i < g->num_active_players; i++) {
         // have to split up cases since up/down is only a move by one 
         if (old_coords[i].d == UP || old_coords[i].d == DOWN) {
@@ -193,13 +198,16 @@ void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords
 
 int check_if_wall(Game g, int x, int y) {
     int n = (MWIDTH * y) + x;
+    //fprintf(stderr, "max wall size is %d\n", (MWIDTH * MHEIGHT));
+    //fprintf(stderr, "wall at index %d * %d = %d\n", x, y, n);
     
+    assert(g != NULL);
     assert(g->map != NULL);
-    fprintf(stderr, "%c\n", (g->map)[n]);
+    //fprintf(stderr, "%c\n", (g->map)[n]);
     if ((g->map)[n] == '1') {
-         return true; 
+         return 1; 
     }
-    return false;
+    return 0;
 }
 
 void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
