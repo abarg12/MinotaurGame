@@ -97,13 +97,14 @@ int main (int argc, char **argv)
                         calculate_scores(game);
                         send_end_game_notifcation(game);
                         
+                        update_players(game);
+
                         // next round setup
                         if (game->num_registered_players < MAX_ACTIVE_PLAYERS) {
                             game->game_state   = WAITING;
                             game->server_state = RECEIVE;
                         
                         } else {
-                            update_players(game);
                             start_game(game);
                             game->server_state = SEND;
                         }
@@ -125,7 +126,6 @@ void update_players(Game game)
     while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
         curr->last_move = -1; 
-        game->num_active_players--;
         curr->collided_with = false;
         // fprintf(stderr, "spectating: %s\n", curr->name);
         curr = curr->next;
@@ -135,6 +135,7 @@ void update_players(Game game)
             curr = game->players_head;
         }
     }
+    game->num_active_players = 0;
     game->active_p_head = curr;
 }
 
@@ -296,7 +297,6 @@ void send_ping(Game game)
     } else {
         t = -1;
     }
-    fprintf(stderr, "time remaining: %d\n", t);
 
     bzero(msg->data, MAX_DATA_LEN);
     msg->data[0] = t;
@@ -396,6 +396,7 @@ bool receive_data(Game game)
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
             if (game->game_state == WAITING) {
+                fprintf(stderr, "in receive from: WAITING\n");
                 start_game(game);
             }
             print_players(game);
@@ -450,15 +451,20 @@ void print_game_state(Game game)
 void start_game(Game game) 
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
+    fprintf(stderr, "***** here 1 *****\n");
         Player curr = game->active_p_head;
         int i = game->num_active_players;
+        fprintf(stderr, "num_active_players: %d\n", i);
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
+            fprintf(stderr, "***** here 3 *****\n");
              curr->player_state = PLAYING;
              if (i == 0) {
+            fprintf(stderr, "***** here 4 *****\n");
                 curr->phys.x = MWIDTH/2;
                 curr->phys.y = MHEIGHT/2;
                 curr->phys.d = DOWN;
              } else {
+            fprintf(stderr, "***** here 5 *****\n");
                 // The upper-left corner of the screen
                 curr->phys.x = 6;
                 curr->phys.y = 3;
@@ -468,6 +474,7 @@ void start_game(Game game)
             //  fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;
+             fprintf(stderr, "num_active_players in loop: %d\n", i);
 
              if (curr == NULL) {
                 curr = game->players_head;
