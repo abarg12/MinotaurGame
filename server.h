@@ -31,7 +31,7 @@ typedef struct Player *Player;
 #define PLAYER_NAME_LEN 20
 #define BILLION 1000000000L
 
-int ROUND_TIME;
+// int ROUND_TIME;
 
 typedef enum MessageType {
     REGISTER = 0,
@@ -59,6 +59,7 @@ typedef enum GameState {
 } GameState;
 
 typedef struct Game {
+    int         ROUND_TIME;
     char        map_name[MAP_NAME_LEN];
     int         sockfd;
     GameState   game_state;
@@ -95,7 +96,7 @@ typedef struct __attribute__((__packed__)) Message {
 // } *Frame;
 
 void start_game(Game game);
-void initialize_game(Game game, int sockfd, char *file_name);
+void initialize_game(Game game, int sockfd, char *file_name, int t);
 bool receive_data(Game game);
 void print_game_state(Game game);
 void reset_timeout(Game game);
@@ -108,7 +109,7 @@ int time_remaining(Game game);
 // send messages to clients:
 void send_to_all(Game game, char *msg, int size);
 void send_to_single(Game game, Player p, char *msg, int size);
-void send_player_registration_ack(Game game, Player p);
+void send_player_registration_ack(Game game, Player p, char reg_status);
 void send_map(Game game);
 void send_ping(Game game);
 void send_start_notification(Game game);

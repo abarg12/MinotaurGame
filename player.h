@@ -17,8 +17,8 @@
 #define PLAYER_NAME_INDEX 1
 #define PLAYER_NAME_LEN 20
 #define MAX_UNACKED 3
-
-// typedef struct Game *Game;
+#define SUCCESS '1'
+#define FAILURE '0'
 
 typedef enum PlayerState {
     SPECTATING,
@@ -54,5 +54,6 @@ void clear_all_players(Game game);
 void print_move_direction(Direction d);
 void incr_ping_tracker(Game game);
 void reset_unacked(Game game, char *name);
+bool check_unique(Game game, char *name);
 
 #endif

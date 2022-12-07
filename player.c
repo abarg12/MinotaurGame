@@ -47,9 +47,28 @@ Player find_player(Game game, char *name)
 void register_player(Game game, char *name, struct sockaddr_in *clientaddr, 
                      int *clientlen)
 {   
-   Player new_p = create_new_player(game, name, clientaddr, clientlen);
-   add_player_to_list(game, new_p);
-   send_player_registration_ack(game, new_p);
+    Player new_p  = create_new_player(game, name, clientaddr, clientlen);
+    bool unique_p = check_unique(game, name);
+
+    if (unique_p) {
+        add_player_to_list(game, new_p);
+        send_player_registration_ack(game, new_p, SUCCESS);
+    } else {
+        send_player_registration_ack(game, new_p, FAILURE);
+    } 
+}
+
+// returns true if the given name doesn't yet exist in the list of registered players, false otherwise.
+bool check_unique(Game game, char *name)
+{
+    Player curr = game->players_head;
+    while (curr != NULL) {
+        if (strcmp(curr->name, name) == 0) {
+            return false;
+        }
+        curr = curr->next;
+    }
+    return true;
 }
 
 // adds a given player to list of players

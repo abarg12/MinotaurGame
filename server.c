@@ -20,7 +20,7 @@ int main (int argc, char **argv)
 		exit(1);
 	}
 	portno = atoi(argv[1]);
-    ROUND_TIME = atoi(argv[2]);
+    // ROUND_TIME = atoi(argv[2]);
     char map_name[MAP_NAME_LEN];
     strcpy(map_name, argv[3]);
 
@@ -44,7 +44,7 @@ int main (int argc, char **argv)
     Game game = malloc(sizeof(*game));
     assert (game != NULL);
 
-    initialize_game(game, sockfd, map_name);
+    initialize_game(game, sockfd, map_name, atoi(argv[2]));
     int i= 0;
     // while(i < 40) {
     while (1) {
@@ -143,7 +143,7 @@ void update_players(Game game)
 // returns false otherwise.
 bool is_round_over(Game game)
 {   
-    return (get_current_time() - time_in_billion(game)) / BILLION >= ROUND_TIME;
+    return (get_current_time() - time_in_billion(game)) / BILLION >= game->ROUND_TIME;
 }
 
 // includes
@@ -245,7 +245,7 @@ void add_names_scores(Game game, char *msg)
 
 // send the player a registration ack after they've been added to the
 // players list, which includes the map currently being used.
-void send_player_registration_ack(Game game, Player p)
+void send_player_registration_ack(Game game, Player p, char reg_status)
 {
     Message msg = malloc(sizeof(*msg));
     assert (msg != NULL);
@@ -257,6 +257,10 @@ void send_player_registration_ack(Game game, Player p)
 
     bzero(msg->data, MAX_DATA_LEN);
     memcpy(msg->data, game->map_name, MAP_NAME_LEN);
+
+    // success/failure indicator
+    (msg->data + MAP_NAME_LEN)[0] = reg_status;
+    fprintf(stderr, "success/failure indicator %c\n", (msg->data + MAP_NAME_LEN)[0] );
 
     send_to_single(game, p, (char*) msg, sizeof(*msg));
 }
@@ -294,6 +298,7 @@ void send_ping(Game game)
     int t;
     if (game->game_state == IN_PLAY) {
         t = time_remaining(game);
+        fprintf(stderr, "time remaining %d\n", t);
     } else {
         t = -1;
     }
@@ -307,7 +312,7 @@ void send_ping(Game game)
 // returns the number of seconds remaining in a round in seconds
 int time_remaining(Game game)
 {
-    return ROUND_TIME - (get_current_time() - time_in_billion(game)) / BILLION;
+    return game->ROUND_TIME - (get_current_time() - time_in_billion(game)) / BILLION;
 }
 
 // helper function to send a message to all registered players
@@ -451,20 +456,16 @@ void print_game_state(Game game)
 void start_game(Game game) 
 {
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
-    fprintf(stderr, "***** here 1 *****\n");
         Player curr = game->active_p_head;
         int i = game->num_active_players;
-        fprintf(stderr, "num_active_players: %d\n", i);
+        // fprintf(stderr, "num_active_players: %d\n", i);
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
-            fprintf(stderr, "***** here 3 *****\n");
              curr->player_state = PLAYING;
              if (i == 0) {
-            fprintf(stderr, "***** here 4 *****\n");
                 curr->phys.x = MWIDTH/2;
                 curr->phys.y = MHEIGHT/2;
                 curr->phys.d = DOWN;
              } else {
-            fprintf(stderr, "***** here 5 *****\n");
                 // The upper-left corner of the screen
                 curr->phys.x = 6;
                 curr->phys.y = 3;
@@ -474,7 +475,6 @@ void start_game(Game game)
             //  fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;
              i++;
-             fprintf(stderr, "num_active_players in loop: %d\n", i);
 
              if (curr == NULL) {
                 curr = game->players_head;
@@ -487,8 +487,11 @@ void start_game(Game game)
     }
 }
 
-void initialize_game(Game game, int sockfd, char *file_name)
+void initialize_game(Game game, int sockfd, char *file_name, int t)
 {
+
+    game->ROUND_TIME = t;
+
     // map
     bzero(game->map_name, MAP_NAME_LEN);
     strcpy(game->map_name, file_name);
