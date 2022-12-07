@@ -55,6 +55,7 @@ void register_player(Game game, char *name, struct sockaddr_in *clientaddr,
         send_player_registration_ack(game, new_p, SUCCESS);
     } else {
         send_player_registration_ack(game, new_p, FAILURE);
+        free(new_p);
     } 
 }
 
