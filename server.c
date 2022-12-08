@@ -223,11 +223,14 @@ void add_names_scores(Game game, char *msg)
     while (curr != NULL && i < game->num_active_players)
     {   
         if (curr->player_state == PLAYING) {
+            fprintf(stderr, "name: %s\n", curr->name);
             // add name
             memcpy(msg, curr->name, PLAYER_NAME_LEN);
             
             // add score
-            memcpy(msg + PLAYER_NAME_LEN, &curr->score, sizeof(int));
+            int score = htonl(curr->score);
+            memcpy(msg + PLAYER_NAME_LEN, &score, sizeof(int));
+            fprintf(stderr, "score %d\n", curr->score);
 
             // advance pointer in message
             msg += PLAYER_NAME_LEN + sizeof(int);
