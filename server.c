@@ -461,6 +461,7 @@ void start_game(Game game)
     if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
         Player curr = game->active_p_head;
         int i = game->num_active_players;
+        int placementIter = 0;
         // fprintf(stderr, "num_active_players: %d\n", i);
         while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
@@ -470,10 +471,12 @@ void start_game(Game game)
                 curr->phys.d = DOWN;
              } else {
                 // The upper-left corner of the screen
-                curr->phys.x = 6;
+                curr->phys.x = 6 + placementIter;
                 curr->phys.y = 3;
                 curr->phys.d = UP;
+                placementIter = placementIter + 4;
              }
+
              game->num_active_players++;
             //  fprintf(stderr, "playing: %s\n", curr->name);
              curr = curr->next;

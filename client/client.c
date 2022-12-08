@@ -11,6 +11,7 @@
 #include <netdb.h> 
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
 #include "client.h"
 
 #define BUFSIZE 533
@@ -23,22 +24,23 @@ void registration_rq(ServerData *sd, char *player_name);
 void download_map();
 void draw_map(WINDOW *game_window);
 void reset_map(WINDOW *game_window);
-void update_map(char *buf, WINDOW *game_window);
+void update_map(char *buf, WINDOW *game_window, char *player_name);
 PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name);
 PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name);
-int parse_instr(ServerData *sd, char *player_name);
+int  parse_instr(ServerData *sd, char *player_name);
 void send_mv_inst(ServerData *sd, char *player_name, char move_type);
 void send_exit_msg(ServerData *sd, char *player_name);
 void print_buffer(char *buf, int n);
 void parse_start_info(char *buf, char *player_name);
-void parse_reg_ack(char *buf);
+int  parse_reg_ack(char *buf);
 void ack_ping(ServerData *sd, char *player_name);
 
 char *map_name;
 char *map;
 int move_seq;
 enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
+char *scoreBuf;
 
 void intHandler(int signal) {
     client_exit(NULL);
@@ -93,12 +95,14 @@ int main(int argc, char **argv) {
     refresh();
     WINDOW *game_window = NULL;
     start_color();
-    init_pair(1, COLOR_WHITE, COLOR_WHITE);
-    init_pair(2, COLOR_RED, COLOR_BLACK);
+    init_pair(1, COLOR_WHITE, COLOR_WHITE); // wall color (foreground and background white)
+    init_pair(2, COLOR_RED, COLOR_BLACK);  // Minotaur text (foreground red, background black)
     init_pair(3, COLOR_GREEN, COLOR_BLACK);
     init_pair(4, COLOR_RED, COLOR_RED);
     init_pair(5, COLOR_GREEN, COLOR_GREEN);
     init_pair(6, COLOR_BLUE, COLOR_BLACK);
+    init_pair(7, COLOR_BLACK, COLOR_GREEN);
+    init_pair(8, COLOR_BLACK, COLOR_RED);
 
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
@@ -162,6 +166,35 @@ PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name
 
     wrefresh(game_window);
     refresh();
+
+////////TODO: use the score buf to print out the game's score
+
+    assert(scoreBuf != NULL);
+    int score_entries = scoreBuf[0]; 
+    int score_offset = 1;
+    char *score_player_name[20];
+    int score;
+
+    wmove(game_window, 2, 0);
+    wprintw(game_window, "SCORES");
+    wmove(game_window, 3, 0);
+    wprintw(game_window, "-------------------");
+    int screen_y_offset = 4;
+    for (int i = 0; i < score_entries; i++) {
+        memcpy(score_player_name, scoreBuf + score_offset, 20);
+        memcpy(&score, scoreBuf + score_offset + 20, 4);
+        score = ntohl(score);
+
+        wmove(game_window, screen_y_offset + i, 0);
+        wprintw(game_window, "%s", score_player_name);
+        wprintw(game_window, ": %d", score);
+        wrefresh(game_window);
+
+        score_offset = score_offset + 24;
+    } 
+    
+    // free the score buffer so it can be re-used later
+    free(scoreBuf);
 
     while(1) {
         read_fd_set = active_fd_set;
@@ -278,13 +311,21 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                     // interpret messages from server 
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
                     if (buf[0] == 3) {
-                        update_map(buf, game_window);
+                        update_map(buf, game_window, player_name);
                     }
                     else if (buf[0] == 6) {
+                        // copy over the score info into a malloc'd buffer
+                        scoreBuf = malloc(n - 21);
+                        assert(scoreBuf != NULL);
+                        memcpy(scoreBuf, buf + 21, n - 21);
                         return END_OF_GAME;
                     }
                     else if (buf[0] == 7) {
                         seconds = buf[21];
+                        move(0,0);
+                        clrtoeol();
+                        printw("Time Remaining: %d", seconds);
+                        refresh();
                         ack_ping(sd, player_name);
                     }
                     else if (buf[0] == 5) {
@@ -312,10 +353,10 @@ int parse_instr(ServerData *sd, char *player_name) {
     len = read(0, instr, 50);
 
     char key = instr[len - 1]; 
-    move(0,0);
-    clrtoeol();
-    printw("%d: %d", len, key);
-    refresh(); 
+    //move(0,0);
+    //clrtoeol();
+    //printw("%d: %d", len, key);
+    //refresh(); 
 
     // return -1 if client presses 'escape' (27) or 'q' (113)
     if (key == 27 || key == 113) {
@@ -431,7 +472,7 @@ PlayerState lobby_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
         int n;
         char buf[BUFSIZE];
         while(1) {
-           n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
+            n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
 
             if (buf[0] == 5) {
                 parse_start_info(buf, player_name);
@@ -477,8 +518,13 @@ void registration_rq(ServerData *sd, char *player_name) {
         n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
         
         if (buf[0] == 9) {
-            parse_reg_ack(buf);
-            return;
+            if (parse_reg_ack(buf) == '1') {
+                return;
+            } else {
+                client_exit(NULL);
+                fprintf(stderr, "Client name already in use, please choose another\n");
+                exit(0);
+            }
         } 
        // else if (buf[0] == 5) {
        //     parse_start_info(buf, player_name);
@@ -594,9 +640,7 @@ void print_buffer(char *buf, int n) {
 }
 
 
-
-
-void update_map(char *buf, WINDOW *game_window) {
+void update_map(char *buf, WINDOW *game_window, char *player_name) {
     if (game_window != NULL) {
         delwin(game_window);
     }
@@ -623,10 +667,17 @@ void update_map(char *buf, WINDOW *game_window) {
     int minotaury = buf[47];
 
     wmove(game_window, minotaury, minotaurx);
-    wattron(game_window, COLOR_PAIR(4));
-    waddch(game_window,' ');
-    waddch(game_window,' ');
-    wattroff(game_window, COLOR_PAIR(4));
+    if (strcmp(buf + 26, player_name)) {
+        wattron(game_window, COLOR_PAIR(4));
+        waddch(game_window,' ');
+        waddch(game_window,' ');
+        wattroff(game_window, COLOR_PAIR(4));
+    } else {
+        wattron(game_window, COLOR_PAIR(8));
+        waddch(game_window,'m');
+        waddch(game_window,'e');
+        wattroff(game_window, COLOR_PAIR(8));
+    }
     
 
     int num_act_players = (int) buf[25];
@@ -639,10 +690,21 @@ void update_map(char *buf, WINDOW *game_window) {
         humany = buf[offset + 1];
 
         wmove(game_window, humany, humanx); 
-        wattron(game_window, COLOR_PAIR(5));
-        waddch(game_window, ' ');
-        waddch(game_window, ' ');
-        wattroff(game_window, COLOR_PAIR(5));
+
+        // detect if player is current player, so they can be
+        // marked with star to distinguish which human the player
+        // is controlling
+        if (strcmp(buf + offset - 20, player_name)) {
+            wattron(game_window, COLOR_PAIR(5));
+            waddch(game_window, ' ');
+            waddch(game_window, ' ');
+            wattroff(game_window, COLOR_PAIR(5));
+        } else {
+            wattron(game_window, COLOR_PAIR(7));
+            waddch(game_window, 'm');
+            waddch(game_window, 'e');
+            wattroff(game_window, COLOR_PAIR(7));
+        }
 
         offset = offset + 22;
     }
@@ -678,10 +740,12 @@ void parse_start_info(char *buf, char *player_name) {
 
 
 
-void parse_reg_ack(char *buf) {
+int parse_reg_ack(char *buf) {
     // get the map-name from the ack
     int map_offset = 21;
     memcpy(map_name, buf + map_offset, 32);
+    int name_valid_offset = map_offset + 32;
+    return buf[name_valid_offset];
 }
 
 
@@ -698,3 +762,4 @@ void ack_ping(ServerData *sd, char *player_name) {
         exit(1);
     }   
 }
+

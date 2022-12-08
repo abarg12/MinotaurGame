@@ -227,7 +227,7 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
         for (i = n + 1; i < g->num_active_players; i++) {
             // direct overlap (same new coord positions)
             if (check_direct_overlap(new_coords, n, i)) {
-                fprintf(stderr, "direct overlap detected\n");
+                // fprintf(stderr, "direct overlap detected\n");
                 
                 // have to be careful to cover case when one player is 'still' i.e.
                 // running into a wall, and if they are, then the other player has
@@ -252,10 +252,16 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
                         Player human = get_nth_active_player(g, i);
                         assert(human != NULL);
                         human->collided_with = true;
+                        // reset the player location  
+                        new_coords[i].x = 6;
+                        new_coords[i].y = 3;
                     } else {
                         Player human = get_nth_active_player(g, n);
                         assert(human != NULL);
                         human->collided_with = true;
+                        // reset the player location 
+                        human->phys.x = 6;
+                        human->phys.y = 3;
                     }
                 }
 
@@ -276,7 +282,7 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
             
             // pass-through overlap (passed through each other)
             if (check_passthrough(old_coords, new_coords, n, i)) {
-                fprintf(stderr, "passthrough detected\n");
+                // fprintf(stderr, "passthrough detected\n");
                 new_coords[i].x = old_coords[i].x;
                 new_coords[i].y = old_coords[i].y;
                 new_coords[n].x = old_coords[n].x;
@@ -289,14 +295,21 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
                     assert(mino != NULL);
                     mino->score = mino->score + 1;
 
+                    // determine which client is the human and update their object
                     if (n == 0) {
                         Player human = get_nth_active_player(g, i);
                         assert(human != NULL);
                         human->collided_with = true;
+                        // reset the player location
+                        new_coords[i].x = 6;
+                        new_coords[i].y = 3;
                     } else {
                         Player human = get_nth_active_player(g, n);
                         assert(human != NULL);
                         human->collided_with = true;
+                        // reset the player location 
+                        new_coords[n].x = 6;
+                        new_coords[n].y = 3;
                     }
                 }
 

@@ -20,7 +20,7 @@
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
-#define MAX_ACTIVE_PLAYERS 2
+#define MAX_ACTIVE_PLAYERS 5
 #define MOVE_INSTR_INDEX 25
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
