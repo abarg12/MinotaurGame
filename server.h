@@ -20,12 +20,12 @@
 #define COLUMNS 32
 #define MAX_CLIENT_MSG 26 // the max number of bytes the server can receive 
                          // from a client
-#define MAX_ACTIVE_PLAYERS 5
 #define MOVE_INSTR_INDEX 25
 #define MOVE_SEQUENCE_INDEX 21
 #define PLAYER_NAME_INDEX 1
 #define MAX_DATA_LEN 512
 #define MAP_NAME_LEN 32
+#define SERVER_NAME_LEN  7
 
 typedef struct Player *Player;
 #define PLAYER_NAME_LEN 20
@@ -59,6 +59,7 @@ typedef enum GameState {
 } GameState;
 
 typedef struct Game {
+    int         MAX_ACTIVE_PLAYERS;
     int         ROUND_TIME;
     char        map_name[MAP_NAME_LEN];
     int         sockfd;
@@ -77,6 +78,7 @@ typedef struct Game {
     int         ping_counter;
     int         ping_threshold;
     struct timespec *start_time;
+    struct timespec *end_time;
     struct timeval *timeout;
 } *Game;
 
@@ -96,7 +98,7 @@ typedef struct __attribute__((__packed__)) Message {
 // } *Frame;
 
 void start_game(Game game);
-void initialize_game(Game game, int sockfd, char *file_name, int t);
+void initialize_game(Game game, int sockfd, char *file_name, int t, int players);
 bool receive_data(Game game);
 void print_game_state(Game game);
 void reset_timeout(Game game);
@@ -104,6 +106,9 @@ void set_start_time(Game game);
 int64_t get_current_time();
 int64_t time_in_billion(Game game);
 bool is_round_over(Game game);
+bool round_delay_is_over(Game game);
+int64_t end_time_in_billion(Game game);
+void set_end_time(Game game);
 int time_remaining(Game game);
 
 // send messages to clients:

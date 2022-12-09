@@ -161,7 +161,7 @@ void remove_idle_players(Game game)
     }
 
     if (game->game_state == IN_PLAY && 
-        game->num_active_players < MAX_ACTIVE_PLAYERS) 
+        game->num_active_players < game->MAX_ACTIVE_PLAYERS) 
     {
         game->game_state = END_OF_GAME;
         game->server_state = SEND;
@@ -174,7 +174,7 @@ void remove_player(Game game, char *name)
     Player found_p = find_player(game, name);
 
     if (found_p != NULL) {
-        fprintf(stderr, "removing player %s\n", name );
+        // fprintf(stderr, "removing player %s\n", name );
         
         game->num_registered_players--;
 

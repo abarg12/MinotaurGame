@@ -15,12 +15,11 @@ int main (int argc, char **argv)
 	struct hostent *hostp; /* client host info */
 	struct timeval *t = NULL;
 
-	if (argc != 4) {
-		fprintf(stderr, "usage: %s <port number> <round time> <file name>\n", argv[0]);
+	if (argc != 5) {
+		fprintf(stderr, "usage: %s <port number> <round time> <file name> <required active players>\n", argv[0]);
 		exit(1);
 	}
 	portno = atoi(argv[1]);
-    // ROUND_TIME = atoi(argv[2]);
     char map_name[MAP_NAME_LEN];
     strcpy(map_name, argv[3]);
 
@@ -44,13 +43,12 @@ int main (int argc, char **argv)
     Game game = malloc(sizeof(*game));
     assert (game != NULL);
 
-    initialize_game(game, sockfd, map_name, atoi(argv[2]));
+    initialize_game(game, sockfd, map_name, atoi(argv[2]), atoi(argv[4]));
+
     int i= 0;
-    // while(i < 40) {
     while (1) {
         FD_SET(game->sockfd, game->active_fd_set);
         // print_game_state(game);
-
         switch(game->server_state) {
             case RECEIVE: {
                 if(game->game_state == IN_PLAY && is_round_over(game)) {
@@ -79,11 +77,13 @@ int main (int argc, char **argv)
             case SEND: {
                 switch(game->game_state) {
                     case LAUNCH:
-                        fprintf(stderr, "send start notification \n");
-                        send_start_notification(game);
-                        set_start_time(game);
-                        game->game_state   = IN_PLAY;
-                        game->server_state = RECEIVE;
+                        if (game->round == 0 || round_delay_is_over(game)) {
+                            // fprintf(stderr, "round delay over, sening start notification \n");
+                            send_start_notification(game);
+                            set_start_time(game);
+                            game->game_state   = IN_PLAY;
+                            game->server_state = RECEIVE;
+                        }
                         break;
 
                     case IN_PLAY:
@@ -92,7 +92,8 @@ int main (int argc, char **argv)
                         break;
 
                     case END_OF_GAME:
-                        fprintf(stderr, "end of game %d notification\n",game->round);
+                        // fprintf(stderr, "end of game %d notification\n",game->round);
+                        set_end_time(game);
                         game->round++;
                         calculate_scores(game);
                         send_end_game_notifcation(game);
@@ -100,7 +101,7 @@ int main (int argc, char **argv)
                         update_players(game);
 
                         // next round setup
-                        if (game->num_registered_players < MAX_ACTIVE_PLAYERS) {
+                        if (game->num_registered_players < game->MAX_ACTIVE_PLAYERS) {
                             game->game_state   = WAITING;
                             game->server_state = RECEIVE;
                         
@@ -115,7 +116,6 @@ int main (int argc, char **argv)
                 break;
             }
         }
-        // i++; fprintf(stderr, "i: %d\n", i);
     }
 }
 
@@ -123,7 +123,7 @@ void update_players(Game game)
 {
     Player curr = game->active_p_head;
     int i = 0;
-    while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
+    while (curr != NULL && i < game->MAX_ACTIVE_PLAYERS) {
         curr->player_state = SPECTATING;
         curr->last_move = -1; 
         curr->collided_with = false;
@@ -144,6 +144,11 @@ void update_players(Game game)
 bool is_round_over(Game game)
 {   
     return (get_current_time() - time_in_billion(game)) / BILLION >= game->ROUND_TIME;
+}
+
+bool round_delay_is_over(Game game)
+{   
+    return get_current_time() >= end_time_in_billion(game) + 5 * BILLION;
 }
 
 // includes
@@ -201,8 +206,8 @@ void send_end_game_notifcation(Game game)
     msg->type = END_OF_GAME_NOTIFICATION;
     
     bzero(msg->id, PLAYER_NAME_LEN);
-    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
-
+    memcpy(msg->id, "Server", SERVER_NAME_LEN);
+    
     bzero(msg->data, MAX_DATA_LEN);
     msg->data[0] = game->num_active_players;
 
@@ -223,14 +228,12 @@ void add_names_scores(Game game, char *msg)
     while (curr != NULL && i < game->num_active_players)
     {   
         if (curr->player_state == PLAYING) {
-            fprintf(stderr, "name: %s\n", curr->name);
             // add name
             memcpy(msg, curr->name, PLAYER_NAME_LEN);
             
             // add score
             int score = htonl(curr->score);
             memcpy(msg + PLAYER_NAME_LEN, &score, sizeof(int));
-            fprintf(stderr, "score %d\n", curr->score);
 
             // advance pointer in message
             msg += PLAYER_NAME_LEN + sizeof(int);
@@ -256,14 +259,13 @@ void send_player_registration_ack(Game game, Player p, char reg_status)
     msg->type = REGISTRATION_ACK;
 
     bzero(msg->id, PLAYER_NAME_LEN);
-    memcpy(msg->id, "Server", PLAYER_NAME_LEN);
+    memcpy(msg->id, "Server", SERVER_NAME_LEN);
 
     bzero(msg->data, MAX_DATA_LEN);
     memcpy(msg->data, game->map_name, MAP_NAME_LEN);
 
     // success/failure indicator
     (msg->data + MAP_NAME_LEN)[0] = reg_status;
-    fprintf(stderr, "success/failure indicator %c\n", (msg->data + MAP_NAME_LEN)[0] );
 
     send_to_single(game, p, (char*) msg, sizeof(*msg));
 }
@@ -301,7 +303,6 @@ void send_ping(Game game)
     int t;
     if (game->game_state == IN_PLAY) {
         t = time_remaining(game);
-        fprintf(stderr, "time remaining %d\n", t);
     } else {
         t = -1;
     }
@@ -350,7 +351,7 @@ void send_to_single(Game game, Player p, char *msg, int size)
 void reset_timeout(Game game)
 {
     game->timeout->tv_sec = 0;
-    game->timeout->tv_usec = 250000;
+    game->timeout->tv_usec = 150000;
 }
 
 void ping(Game game)
@@ -456,14 +457,15 @@ void print_game_state(Game game)
 // determines if the game can start based on the number of registered players
 // and changes the game state to "IN_PLAY" if so
 // and changes the state of two players to "PLAYING"
+// and updates the count of active players from 0 to game->MAX_ACTIVE_PLAYERS
 void start_game(Game game) 
 {
-    if (game->num_registered_players >= MAX_ACTIVE_PLAYERS) {
+    if (game->num_registered_players >= game->MAX_ACTIVE_PLAYERS) {
         Player curr = game->active_p_head;
         int i = game->num_active_players;
         int placementIter = 0;
         // fprintf(stderr, "num_active_players: %d\n", i);
-        while (curr != NULL && i < MAX_ACTIVE_PLAYERS) {
+        while (curr != NULL && i < game->MAX_ACTIVE_PLAYERS) {
              curr->player_state = PLAYING;
              if (i == 0) {
                 curr->phys.x = MWIDTH/2;
@@ -493,10 +495,13 @@ void start_game(Game game)
     }
 }
 
-void initialize_game(Game game, int sockfd, char *file_name, int t)
+void initialize_game(Game game, int sockfd, char *file_name, int t, int n_players)
 {
 
     game->ROUND_TIME = t;
+    game->end_time = malloc(sizeof*game->end_time);
+    assert (game->end_time != NULL);
+    set_end_time(game); // sets the initial end time to current time
 
     // map
     bzero(game->map_name, MAP_NAME_LEN);
@@ -511,6 +516,7 @@ void initialize_game(Game game, int sockfd, char *file_name, int t)
     set_start_time(game);
     
     // players
+    game->MAX_ACTIVE_PLAYERS = n_players;
     game->players_head  = NULL;
     game->players_tail  = NULL;
     game->active_p_head = game->players_head;
@@ -547,10 +553,21 @@ void set_start_time(Game game)
     clock_gettime(CLOCK_REALTIME, game->start_time);
 }
 
-// converts the time to billions for easy comparisons.
+// converts the game's start time to billions for easy comparisons.
 int64_t time_in_billion(Game game)
 {
     return BILLION * game->start_time->tv_sec + game->start_time->tv_nsec;
+}
+
+int64_t end_time_in_billion(Game game)
+{
+    return BILLION * game->end_time->tv_sec + game->end_time->tv_nsec;
+}
+
+// sets the round's end time
+void set_end_time(Game game) 
+{
+    clock_gettime(CLOCK_REALTIME, game->end_time);
 }
 
 // returns the current time in billions
