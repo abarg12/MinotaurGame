@@ -79,6 +79,8 @@ int main (int argc, char **argv)
                     case LAUNCH:
                         if (game->round == 0 || round_delay_is_over(game)) {
                             // fprintf(stderr, "round delay over, sening start notification \n");
+                            print_game_state(game);
+
                             send_start_notification(game);
                             set_start_time(game);
                             game->game_state   = IN_PLAY;
@@ -405,7 +407,7 @@ bool receive_data(Game game)
             register_player(game, buf + PLAYER_NAME_INDEX, clientaddr,
                            clientlen);
             if (game->game_state == WAITING) {
-                fprintf(stderr, "in receive from: WAITING\n");
+                // fprintf(stderr, "in receive from: WAITING\n");
                 start_game(game);
             }
             print_players(game);
@@ -443,6 +445,7 @@ void print_game_state(Game game)
             break;
         case LAUNCH:
             strcpy(game_state, "LAUNCH");
+            fprintf(stderr, "p_head: %s\n", game->active_p_head);
             break;
         
         default:
