@@ -79,8 +79,10 @@ void update(Game g) {
     check_player_collisions(g, old_coords, new_coords);        
 
     int player_number = 0;
-    Player curr_player = g->players_head;
-    while (curr_player != NULL) {
+    //Player curr_player = g->players_head;
+    Player curr_player = g->active_p_head;
+    //while (curr_player != NULL) {
+    while (player_number < g->num_active_players) {
         if (curr_player->player_state != PLAYING) {
             curr_player = curr_player->next;
             continue;     
@@ -103,6 +105,9 @@ void update(Game g) {
 
         player_number = player_number + 1;
         curr_player = curr_player->next;
+        if (curr_player == NULL) {
+            curr_player = g->players_head;
+        }
     }
 
     // int i;
@@ -115,9 +120,10 @@ void update(Game g) {
 
 
 void get_curr_coords(Game g, PlayerPhysics *old_coords) {
-    Player p = g->players_head;
+    //Player p = g->players_head;
+    Player p = g->active_p_head;
     int n = 0;
-    while (p != NULL) {
+    while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
             continue;
@@ -131,6 +137,9 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
 
         n = n + 1;
         p = p->next;
+        if (p == NULL) {
+            p = g->players_head;
+        }
     }
 }
 
@@ -213,9 +222,10 @@ int check_if_wall(Game g, int x, int y) {
 void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
     assert(old_coords != NULL && new_coords != NULL);
 
-    Player p = g->players_head;
+    //Player p = g->players_head;
+    Player p = g->active_p_head;
     int n = 0;
-    while (p != NULL) {
+    while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
             continue;
@@ -268,7 +278,7 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
 
                 // restart the while loop to verify new collision correction
                 n = 0;
-                p = g->players_head;
+                p = g->active_p_head;
                 continue;
             }
             
@@ -316,7 +326,7 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
 
                 // restart the while loop to verify new collision correction
                 n = 0;
-                p = g->players_head;
+                p = g->active_p_head;
                 continue;
             }
 
@@ -325,6 +335,9 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
         
         n = n + 1;
         p = p->next;
+        if (p == NULL) {
+            p = g->players_head;
+        }
     }           
 }
 
@@ -386,9 +399,9 @@ int check_partial_overlap(PlayerPhysics *coords, int playerA, int playerB) {
 
 
 void calculate_scores(Game g) {
-    Player p = g->players_head;
+    Player p = g->active_p_head;
     int n = 0;
-    while (p != NULL) {
+    while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
             continue;
@@ -400,6 +413,9 @@ void calculate_scores(Game g) {
 
         p = p->next;
         n = n + 1;
+        if (p == NULL) {
+            p = g->active_p_head;
+        }
     }
 }
 
@@ -407,9 +423,10 @@ Player get_nth_active_player(Game g, int n) {
     // 0-indexed
     assert(n < g->num_active_players);
 
-    Player p = g->players_head;
+    //Player p = g->players_head;
+    Player p = g->active_p_head;
     int i = 0;
-    while (p != NULL) {
+    while (i < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
             continue;
@@ -419,5 +436,8 @@ Player get_nth_active_player(Game g, int n) {
         }
         p = p->next;
         i = i + 1;
+        if (p == NULL) {
+            p = g->players_head;
+        }
     }
 }
