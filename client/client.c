@@ -265,7 +265,7 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     
     move(1,0);
     clrtoeol();
-    printw("You are a ");
+    printw("%s, you are a ", player_name);
     if (role == HUMAN) {
         attron(COLOR_PAIR(3));
         printw("HUMAN");
