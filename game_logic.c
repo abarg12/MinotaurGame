@@ -85,6 +85,9 @@ void update(Game g) {
     while (player_number < g->num_active_players) {
         if (curr_player->player_state != PLAYING) {
             curr_player = curr_player->next;
+            if (curr_player == NULL) {
+                curr_player = g->players_head;
+            }
             continue;     
         }
         
@@ -126,6 +129,9 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
     while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
+            if (p == NULL) {
+                p = g->players_head;
+            }
             continue;
         }
         assert(p->phys.x > 0 && p->phys.x < MWIDTH && p->phys.y > 0 && p->phys.y < MHEIGHT);
@@ -228,6 +234,9 @@ void check_player_collisions(Game g, PlayerPhysics *old_coords, PlayerPhysics *n
     while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
+            if (p == NULL) {
+                p = g->players_head;
+            }
             continue;
         }
         assert(p->phys.x > 0 && p->phys.x < MWIDTH && p->phys.y > 0 && p->phys.y < MHEIGHT);
@@ -404,6 +413,9 @@ void calculate_scores(Game g) {
     while (n < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
+            if (p == NULL) {
+                p = g->players_head;
+            }
             continue;
         }
 
@@ -429,6 +441,9 @@ Player get_nth_active_player(Game g, int n) {
     while (i < g->num_active_players) {
         if (p->player_state != PLAYING) {
             p = p->next;
+            if (p == NULL) {
+                p = g->players_head;
+            }
             continue;
         }
         if (i == n) {
