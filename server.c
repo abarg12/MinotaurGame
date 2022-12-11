@@ -187,13 +187,19 @@ void send_start_notification(Game game)
 // adds the names of all the active players into array pointed to by j.
 void add_active_players(Game game, char *j) 
 {
-    Player p = game->players_head;
-    while (p != NULL) {
+    Player p = game->active_p_head;
+    int i = 0;
+    while (p != NULL && i < game->MAX_ACTIVE_PLAYERS) {
         if (p->player_state == PLAYING) {
             strcpy(j, p->name);
             j += PLAYER_NAME_LEN;
         }
+        
         p = p->next;
+        if (p == NULL) {
+            p = game->players_head;
+        }
+        i++;
     }
 }
 
