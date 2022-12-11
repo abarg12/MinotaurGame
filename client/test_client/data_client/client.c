@@ -45,6 +45,7 @@ char *scoreBuf;
 FILE *logfile;
 struct timespec t1;
 struct timespec t2;
+char *logfile_name;
 
 void intHandler(int signal) {
     client_exit(NULL);
@@ -62,16 +63,13 @@ int main(int argc, char **argv) {
     char buf[BUFSIZE];
     char *player_name = malloc(20);
     map_name = malloc(32);
-    
    
-    if (argc == 1) {
-        sd.hostname = "comp112-05.cs.tufts.edu";
-        sd.port_num = 9040;
-    } else if (argc == 3) {
-        sd.hostname = argv[1];
+    if (argc ==  3) {
+        logfile_name = argv[1]; 
         sd.port_num = atoi(argv[2]); 
+        sd.hostname = "comp112-05.cs.tufts.edu";
     } else {
-        fprintf(stderr, "usage: %s <server address> <port>\n", argv[0]);
+        fprintf(stderr, "usage: %s <port> <logfile name>\n", argv[0]);
         exit(1);
     }
 
@@ -126,7 +124,7 @@ int main(int argc, char **argv) {
                 map = malloc(GWIDTH * GHEIGHT);
                 download_map();
                 draw_map(game_window);
-                logfile = fopen("logfile.txt", "w");
+                logfile = fopen(logfile_name, "w");
                 pstate = play_loop(&sd, game_window, player_name); 
                 free(map);
                 break;
