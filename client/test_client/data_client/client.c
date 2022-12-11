@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <assert.h>
+#include <time.h>
 #include "client.h"
 
 #define BUFSIZE 533
@@ -41,6 +42,9 @@ char *map;
 int move_seq;
 enum Role { HUMAN, MINOTAUR, SPECTATOR } role;
 char *scoreBuf;
+FILE *logfile;
+struct timespec t1;
+struct timespec t2;
 
 void intHandler(int signal) {
     client_exit(NULL);
@@ -49,6 +53,11 @@ void intHandler(int signal) {
 }
 
 int main(int argc, char **argv) {
+    t1.tv_sec = 0;
+    t1.tv_nsec = 0;
+    t2.tv_sec = 0;
+    t2.tv_nsec = 0;
+
     ServerData sd;
     char buf[BUFSIZE];
     char *player_name = malloc(20);
@@ -58,9 +67,6 @@ int main(int argc, char **argv) {
     if (argc == 1) {
         sd.hostname = "comp112-05.cs.tufts.edu";
         sd.port_num = 9040;
-    } else if (argc == 2) {
-        sd.hostname = "comp112-05.cs.tufts.edu";
-        sd.port_num = atoi(argv[1]);
     } else if (argc == 3) {
         sd.hostname = argv[1];
         sd.port_num = atoi(argv[2]); 
@@ -120,6 +126,7 @@ int main(int argc, char **argv) {
                 map = malloc(GWIDTH * GHEIGHT);
                 download_map();
                 draw_map(game_window);
+                logfile = fopen("logfile.txt", "w");
                 pstate = play_loop(&sd, game_window, player_name); 
                 free(map);
                 break;
@@ -169,8 +176,6 @@ PlayerState end_game_loop(ServerData *sd, WINDOW *game_window, char *player_name
 
     wrefresh(game_window);
     refresh();
-
-////////TODO: use the score buf to print out the game's score
 
     assert(scoreBuf != NULL);
     int score_entries = scoreBuf[0]; 
@@ -261,16 +266,16 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
     int n, seconds;
     move_seq = 0;
 
-    move(2,0);
-    clrtoeol();
     move(0,0);
     clrtoeol();
     printw("GAME IN PROGRESS using map named: ");
     printw(map_name);
     
+    move(2,0);
+    clrtoeol();
     move(1,0);
     clrtoeol();
-    printw("%s, you are a ", player_name);
+    printw("You are a ");
     if (role == HUMAN) {
         attron(COLOR_PAIR(3));
         printw("HUMAN");
@@ -316,6 +321,28 @@ PlayerState play_loop(ServerData *sd, WINDOW *game_window, char *player_name) {
                     // interpret messages from server 
                     n = recvfrom(sd->sockfd, buf, BUFSIZE, 0, (struct sockaddr *) &sd->serveraddr, &sd->serverlen);
                     if (buf[0] == 3) {
+                        if ((t1.tv_nsec == 0) && (t1.tv_sec == 0)) {
+                             clock_gettime(CLOCK_REALTIME, &t1);
+                        } else {
+                            clock_gettime(CLOCK_REALTIME, &t2);
+                            int diff = 0;
+
+                            // account for the fact that timespecs are represented
+                            // as a struct with seconds and nanoseconds 
+                            if (t2.tv_sec > t1.tv_sec) {
+                                diff = diff + t2.tv_nsec;
+                                diff = diff + (999999999-t1.tv_nsec);
+                            } else {
+                                diff = t2.tv_nsec - t1.tv_nsec;
+                            }
+
+                            t1.tv_sec = t2.tv_sec;
+                            t1.tv_nsec = t2.tv_nsec;
+
+                            char outstring[20];
+                            sprintf(outstring, "%d\n", diff);
+                            fputs(outstring, logfile);
+                        }
                         update_map(buf, game_window, player_name);
                     }
                     else if (buf[0] == 6) {
@@ -536,7 +563,6 @@ void registration_rq(ServerData *sd, char *player_name) {
        //     return;
        // }
         else {
-            // TODO: uncomment code below and test its behavior (reg -> reg-ack) 
             client_exit(NULL);
             fprintf(stderr, "First message from server was not Registration-Ack\n");
             exit(1);
@@ -558,6 +584,7 @@ void client_exit(WINDOW *game_window) {
     if (map_name != NULL) {
         free(map_name);
     }
+    fclose(logfile);
     endwin();
 }
 
@@ -565,7 +592,7 @@ void client_exit(WINDOW *game_window) {
 void download_map() {
     char file_location[60];
     bzero(file_location, 60);
-    strcat(file_location, "../");
+    strcat(file_location, "../../../");
     strcat(file_location, map_name);
     //fprintf(stderr, "file location: \n%s\n", file_location);
     FILE *fptr = fopen(file_location, "rb");
@@ -740,7 +767,6 @@ void parse_start_info(char *buf, char *player_name) {
             }
         }
     }
-    //refresh();
 }
 
 
