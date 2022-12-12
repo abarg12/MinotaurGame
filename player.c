@@ -143,7 +143,7 @@ Player find_idle_players(Game game)
     Player curr = game->players_head;
     while (curr != NULL) {   
         if (curr->unacked == MAX_UNACKED) {
-            fprintf(stderr, "removing idle player: %s\n", curr->name);
+            // fprintf(stderr, "removing idle player: %s\n", curr->name);
             return curr;
         }
         curr = curr->next;
