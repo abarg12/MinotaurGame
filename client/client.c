@@ -95,7 +95,7 @@ int main(int argc, char **argv) {
     initscr();
     signal(SIGINT, intHandler);
     curs_set(2);
-    refresh();
+    //refresh();
     WINDOW *game_window = NULL;
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_WHITE); // wall color (foreground and background white)
@@ -106,7 +106,10 @@ int main(int argc, char **argv) {
     init_pair(6, COLOR_BLUE, COLOR_BLACK);
     init_pair(7, COLOR_BLACK, COLOR_GREEN);
     init_pair(8, COLOR_BLACK, COLOR_RED);
+    init_pair(9, COLOR_WHITE, COLOR_BLACK);
 
+    bkgd(COLOR_PAIR(9));
+    refresh();
     PlayerState pstate = IN_LOBBY; 
     int sentinel = 1;
     while (sentinel) {
