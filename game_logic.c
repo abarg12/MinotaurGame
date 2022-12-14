@@ -82,7 +82,9 @@ void update(Game g) {
     //Player curr_player = g->players_head;
     Player curr_player = g->active_p_head;
     //while (curr_player != NULL) {
+    //fprintf(stderr, "iterating through players:\n");
     while (player_number < g->num_active_players) {
+        //fprintf(stderr, "%s  ", curr_player->name);
         if (curr_player->player_state != PLAYING) {
             curr_player = curr_player->next;
             if (curr_player == NULL) {
@@ -113,12 +115,8 @@ void update(Game g) {
         }
     }
 
-    // int i;
-    // for (i = 0; i < msg_size; i++) {
-    //     fprintf(stderr, "%c", msg[i]);
-    // }
-    // fprintf(stderr, "\n");
     g->update_to_send = msg;
+    //fprintf(stderr, "\ndone iterating through players\n");
 }
 
 
@@ -126,7 +124,9 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
     //Player p = g->players_head;
     Player p = g->active_p_head;
     int n = 0;
+    //fprintf(stderr, "iterating through players:\n");
     while (n < g->num_active_players) {
+        //fprintf(stderr, "%s  ", p->name);
         if (p->player_state != PLAYING) {
             p = p->next;
             if (p == NULL) {
@@ -147,6 +147,7 @@ void get_curr_coords(Game g, PlayerPhysics *old_coords) {
             p = g->players_head;
         }
     }
+    //fprintf(stderr, "\ndone iterating through players\n");
 }
 
 void get_new_coords(Game g, PlayerPhysics *old_coords, PlayerPhysics *new_coords) {
